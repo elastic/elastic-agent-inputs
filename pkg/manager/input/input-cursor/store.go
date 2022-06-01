@@ -22,13 +22,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/elastic/beats/v7/libbeat/common/atomic"
-	"github.com/elastic/beats/v7/libbeat/common/cleanup"
-	"github.com/elastic/beats/v7/libbeat/common/transform/typeconv"
-	"github.com/elastic/beats/v7/libbeat/statestore"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore/cleanup"
 	"github.com/elastic/elastic-agent-libs/logp"
+	"github.com/elastic/elastic-agent-libs/transform/typeconv"
 	"github.com/elastic/go-concert"
 	"github.com/elastic/go-concert/unison"
+	"go.uber.org/atomic"
 )
 
 // store encapsulates the persistent store and the in memory state store, that
@@ -290,7 +290,7 @@ func readStates(log *logp.Logger, store *statestore.Store, prefix string) (*stat
 	}
 
 	err := store.Each(func(key string, dec statestore.ValueDecoder) (bool, error) {
-		if !strings.HasPrefix(string(key), keyPrefix) {
+		if !strings.HasPrefix(key, keyPrefix) {
 			return true, nil
 		}
 

@@ -20,33 +20,33 @@ package acker
 import (
 	"sync"
 
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common/atomic"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
+	"go.uber.org/atomic"
 )
 
 // Nil creates an ACKer that does nothing.
-func Nil() beat.ACKer {
+func Nil() publisher.ACKer {
 	return nilACKer{}
 }
 
 type nilACKer struct{}
 
-func (nilACKer) AddEvent(event beat.Event, published bool) {}
-func (nilACKer) ACKEvents(n int)                           {}
-func (nilACKer) Close()                                    {}
+func (nilACKer) AddEvent(event publisher.Event, published bool) {}
+func (nilACKer) ACKEvents(n int)                                {}
+func (nilACKer) Close()                                         {}
 
 // RawCounting reports the number of ACKed events as has been reported by the outputs or queue.
 // The ACKer does not keep track of dropped events. Events after the client has
 // been closed will still be reported.
-func RawCounting(fn func(int)) beat.ACKer {
+func RawCounting(fn func(int)) publisher.ACKer {
 	return countACKer(fn)
 }
 
 type countACKer func(int)
 
-func (countACKer) AddEvent(_ beat.Event, _ bool) {}
-func (fn countACKer) ACKEvents(n int)            { fn(n) }
-func (countACKer) Close()                        {}
+func (countACKer) AddEvent(_ publisher.Event, _ bool) {}
+func (fn countACKer) ACKEvents(n int)                 { fn(n) }
+func (countACKer) Close()                             {}
 
 // TrackingCounter keeps track of published and dropped events. It reports
 // the number of acked events from the queue in the 'acked' argument and the
@@ -59,12 +59,12 @@ func (countACKer) Close()                        {}
 //  event: X  X  D  D  X  D  D  X  D  X   X   X
 //
 // If the output ACKs 3 events, then all events from index 0 to 6 will be reported because:
-// - the drop sequence for events 2 and 3 is inbetween the number of forwarded and ACKed events
+// - the drop sequence for events 2 and 3 is in between the number of forwarded and ACKed events
 // - events 5-6 have been dropped as well, but event 7 is not ACKed yet
 //
 // If there is no event currently tracked by this ACKer and the next event is dropped by the processors,
 // then `fn` will be called immediately with acked=0 and total=1.
-func TrackingCounter(fn func(acked, total int)) beat.ACKer {
+func TrackingCounter(fn func(acked, total int)) publisher.ACKer {
 	a := &trackingACKer{fn: fn}
 	init := &gapInfo{}
 	a.lst.head = init
@@ -74,7 +74,7 @@ func TrackingCounter(fn func(acked, total int)) beat.ACKer {
 
 // Counting returns an ACK count for all events a client has tried to publish.
 // The ACKer keeps track of dropped events as well, and adjusts the ACK from the outputs accordingly.
-func Counting(fn func(n int)) beat.ACKer {
+func Counting(fn func(n int)) publisher.ACKer {
 	return TrackingCounter(func(_ int, total int) {
 		fn(total)
 	})
@@ -97,7 +97,7 @@ type gapInfo struct {
 	send, dropped int
 }
 
-func (a *trackingACKer) AddEvent(_ beat.Event, published bool) {
+func (a *trackingACKer) AddEvent(_ publisher.Event, published bool) {
 	a.events.Inc()
 	if published {
 		a.addPublishedEvent()
@@ -221,22 +221,22 @@ func (a *trackingACKer) Close() {}
 //  event: X  X  D  D  X  D  D  X  D  X   X   X
 //
 // If the output ACKs 3 events, then all events from index 0 to 6 will be reported because:
-// - the drop sequence for events 2 and 3 is inbetween the number of forwarded and ACKed events
+// - the drop sequence for events 2 and 3 is in between the number of forwarded and ACKed events
 // - events 5-6 have been dropped as well, but event 7 is not ACKed yet
-func EventPrivateReporter(fn func(acked int, data []interface{})) beat.ACKer {
+func EventPrivateReporter(fn func(acked int, data []interface{})) publisher.ACKer {
 	a := &eventDataACKer{fn: fn}
 	a.ACKer = TrackingCounter(a.onACK)
 	return a
 }
 
 type eventDataACKer struct {
-	beat.ACKer
+	publisher.ACKer
 	mu   sync.Mutex
 	data []interface{}
 	fn   func(acked int, data []interface{})
 }
 
-func (a *eventDataACKer) AddEvent(event beat.Event, published bool) {
+func (a *eventDataACKer) AddEvent(event publisher.Event, published bool) {
 	a.mu.Lock()
 	a.data = append(a.data, event.Private)
 	a.mu.Unlock()
@@ -260,7 +260,7 @@ func (a *eventDataACKer) onACK(acked, total int) {
 
 // LastEventPrivateReporter reports only the 'latest' published and acked
 // event if a batch of events have been ACKed.
-func LastEventPrivateReporter(fn func(acked int, data interface{})) beat.ACKer {
+func LastEventPrivateReporter(fn func(acked int, data interface{})) publisher.ACKer {
 	ignored := 0
 	return EventPrivateReporter(func(acked int, data []interface{}) {
 		for i := len(data) - 1; i >= 0; i-- {
@@ -277,13 +277,13 @@ func LastEventPrivateReporter(fn func(acked int, data interface{})) beat.ACKer {
 }
 
 // Combine forwards events to a list of ackers.
-func Combine(as ...beat.ACKer) beat.ACKer {
+func Combine(as ...publisher.ACKer) publisher.ACKer {
 	return ackerList(as)
 }
 
-type ackerList []beat.ACKer
+type ackerList []publisher.ACKer
 
-func (l ackerList) AddEvent(event beat.Event, published bool) {
+func (l ackerList) AddEvent(event publisher.Event, published bool) {
 	for _, a := range l {
 		a.AddEvent(event, published)
 	}
@@ -304,16 +304,16 @@ func (l ackerList) Close() {
 // ConnectionOnly ensures that the given ACKer is only used for as long as the
 // pipeline Client is active.  Once the Client is closed, the ACKer will drop
 // its internal state and no more ACK events will be processed.
-func ConnectionOnly(a beat.ACKer) beat.ACKer {
+func ConnectionOnly(a publisher.ACKer) publisher.ACKer {
 	return &clientOnlyACKer{acker: a}
 }
 
 type clientOnlyACKer struct {
 	mu    sync.Mutex
-	acker beat.ACKer
+	acker publisher.ACKer
 }
 
-func (a *clientOnlyACKer) AddEvent(event beat.Event, published bool) {
+func (a *clientOnlyACKer) AddEvent(event publisher.Event, published bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if sub := a.acker; sub != nil {

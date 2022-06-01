@@ -83,7 +83,7 @@ type ACKer interface {
 	// Close informs the ACKer that the Client used to publish to the pipeline has been closed.
 	// No new events should be published anymore. The ACKEvents method still will be actively called
 	// as long as there are pending events for the client in the pipeline. The Close signal can be used
-	// to supress any ACK event propagation if required.
+	// to suppress any ACK event propagation if required.
 	// Close might be called from another go-routine than AddEvent and ACKEvents.
 	Close()
 }

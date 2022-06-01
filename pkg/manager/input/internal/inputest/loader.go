@@ -20,7 +20,7 @@ package inputest
 import (
 	"testing"
 
-	v2 "github.com/elastic/beats/v7/filebeat/input/v2"
+	"github.com/elastic/elastic-agent-inputs/pkg/manager/input"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
@@ -28,13 +28,13 @@ import (
 // Loader wraps the input Loader in order to provide additional methods for reuse in tests.
 type Loader struct {
 	t testing.TB
-	*v2.Loader
+	*input.Loader
 }
 
 // MustNewTestLoader creates a new Loader. The test fails with fatal if the
 // NewLoader constructor function returns an error.
-func MustNewTestLoader(t testing.TB, plugins []v2.Plugin, typeField, defaultType string) *Loader {
-	l, err := v2.NewLoader(logp.NewLogger("test"), plugins, typeField, defaultType)
+func MustNewTestLoader(t testing.TB, plugins []input.Plugin, typeField, defaultType string) *Loader {
+	l, err := input.NewLoader(logp.NewLogger("test"), plugins, typeField, defaultType)
 	if err != nil {
 		t.Fatalf("Failed to create loader: %v", err)
 	}
@@ -43,7 +43,7 @@ func MustNewTestLoader(t testing.TB, plugins []v2.Plugin, typeField, defaultType
 
 // MustConfigure confiures a new input. The test fails with t.Fatal if the
 // operation failed.
-func (l *Loader) MustConfigure(cfg *conf.C) v2.Input {
+func (l *Loader) MustConfigure(cfg *conf.C) input.Input {
 	i, err := l.Configure(cfg)
 	if err != nil {
 		l.t.Fatalf("Failed to create the input: %v", err)

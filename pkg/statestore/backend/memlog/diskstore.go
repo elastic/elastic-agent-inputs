@@ -29,7 +29,7 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/elastic/beats/v7/libbeat/common/cleanup"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore/cleanup"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/elastic-agent-libs/mapstr"
 )

@@ -18,9 +18,11 @@
 package statestore
 
 import (
+	"fmt"
+
 	"github.com/stretchr/testify/mock"
 
-	"github.com/elastic/beats/v7/libbeat/statestore/backend"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore/backend"
 )
 
 type mockRegistry struct {
@@ -39,7 +41,11 @@ func (m *mockRegistry) Access(name string) (backend.Store, error) {
 
 	var store backend.Store
 	if ifc := args.Get(0); ifc != nil {
-		store = ifc.(backend.Store)
+		var ok bool
+		store, ok = ifc.(backend.Store)
+		if !ok {
+			panic(fmt.Errorf("cannot convert interface to backend.Store: %v", ifc))
+		}
 	}
 
 	return store, args.Error(1)

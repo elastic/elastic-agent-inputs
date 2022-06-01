@@ -15,13 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package v2
+package input
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/elastic/beats/v7/libbeat/beat"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/go-concert/unison"
 )
@@ -34,7 +34,7 @@ type fakeInputManager struct {
 type fakeInput struct {
 	Type   string
 	OnTest func(TestContext) error
-	OnRun  func(Context, beat.PipelineConnector) error
+	OnRun  func(Context, publisher.PipelineConnector) error
 }
 
 func makeConfigFakeInput(prototype fakeInput) func(*conf.C) (Input, error) {
@@ -66,7 +66,7 @@ func (f *fakeInput) Test(ctx TestContext) error {
 	return nil
 }
 
-func (f *fakeInput) Run(ctx Context, pipeline beat.PipelineConnector) error {
+func (f *fakeInput) Run(ctx Context, pipeline publisher.PipelineConnector) error {
 	if f.OnRun != nil {
 		return f.OnRun(ctx, pipeline)
 	}

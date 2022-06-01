@@ -17,48 +17,47 @@
 
 package testing
 
+import "github.com/elastic/elastic-agent-inputs/pkg/publisher"
+
 // ChanClient implements Client interface, forwarding published events to some
-import (
-	"github.com/elastic/beats/v7/libbeat/beat"
-)
 
 type TestPublisher struct {
-	client beat.Client
+	client publisher.Client
 }
 
 // given channel only.
 type ChanClient struct {
 	done            chan struct{}
-	Channel         chan beat.Event
-	publishCallback func(event beat.Event)
+	Channel         chan publisher.Event
+	publishCallback func(event publisher.Event)
 }
 
-func PublisherWithClient(client beat.Client) beat.Pipeline {
+func PublisherWithClient(client publisher.Client) publisher.Pipeline {
 	return &TestPublisher{client}
 }
 
-func (pub *TestPublisher) Connect() (beat.Client, error) {
+func (pub *TestPublisher) Connect() (publisher.Client, error) {
 	return pub.client, nil
 }
 
-func (pub *TestPublisher) ConnectWith(_ beat.ClientConfig) (beat.Client, error) {
+func (pub *TestPublisher) ConnectWith(_ publisher.ClientConfig) (publisher.Client, error) {
 	return pub.client, nil
 }
 
-func NewChanClientWithCallback(bufSize int, callback func(event beat.Event)) *ChanClient {
-	chanClient := NewChanClientWith(make(chan beat.Event, bufSize))
+func NewChanClientWithCallback(bufSize int, callback func(event publisher.Event)) *ChanClient {
+	chanClient := NewChanClientWith(make(chan publisher.Event, bufSize))
 	chanClient.publishCallback = callback
 
 	return chanClient
 }
 
 func NewChanClient(bufSize int) *ChanClient {
-	return NewChanClientWith(make(chan beat.Event, bufSize))
+	return NewChanClientWith(make(chan publisher.Event, bufSize))
 }
 
-func NewChanClientWith(ch chan beat.Event) *ChanClient {
+func NewChanClientWith(ch chan publisher.Event) *ChanClient {
 	if ch == nil {
-		ch = make(chan beat.Event, 1)
+		ch = make(chan publisher.Event, 1)
 	}
 	c := &ChanClient{
 		done:    make(chan struct{}),
@@ -74,7 +73,7 @@ func (c *ChanClient) Close() error {
 
 // PublishEvent will publish the event on the channel. Options will be ignored.
 // Always returns true.
-func (c *ChanClient) Publish(event beat.Event) {
+func (c *ChanClient) Publish(event publisher.Event) {
 	select {
 	case <-c.done:
 	case c.Channel <- event:
@@ -85,12 +84,12 @@ func (c *ChanClient) Publish(event beat.Event) {
 	}
 }
 
-func (c *ChanClient) PublishAll(event []beat.Event) {
+func (c *ChanClient) PublishAll(event []publisher.Event) {
 	for _, e := range event {
 		c.Publish(e)
 	}
 }
 
-func (c *ChanClient) ReceiveEvent() beat.Event {
+func (c *ChanClient) ReceiveEvent() publisher.Event {
 	return <-c.Channel
 }

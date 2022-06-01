@@ -27,8 +27,8 @@ import (
 
 	"github.com/elastic/go-concert/unison"
 
-	v2 "github.com/elastic/beats/v7/filebeat/input/v2"
-	"github.com/elastic/beats/v7/libbeat/statestore"
+	"github.com/elastic/elastic-agent-inputs/pkg/manager/input"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
@@ -108,8 +108,8 @@ func (cim *InputManager) init() error {
 
 // Init starts background processes for deleting old entries from the
 // persistent store if mode is ModeRun.
-func (cim *InputManager) Init(group unison.Group, mode v2.Mode) error {
-	if mode != v2.ModeRun {
+func (cim *InputManager) Init(group unison.Group, mode input.Mode) error {
+	if mode != input.ModeRun {
 		return nil
 	}
 
@@ -145,9 +145,9 @@ func (cim *InputManager) shutdown() {
 	cim.store.Release()
 }
 
-// Create builds a new v2.Input using the provided Configure function.
+// Create builds a new input.Input using the provided Configure function.
 // The Input will run a go-routine per source that has been configured.
-func (cim *InputManager) Create(config *conf.C) (v2.Input, error) {
+func (cim *InputManager) Create(config *conf.C) (input.Input, error) {
 	if err := cim.init(); err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (cim *InputManager) Create(config *conf.C) (v2.Input, error) {
 
 // Lock locks a key for exclusive access and returns an resource that can be used to modify
 // the cursor state and unlock the key.
-func (cim *InputManager) lock(ctx v2.Context, key string) (*resource, error) {
+func (cim *InputManager) lock(ctx input.Context, key string) (*resource, error) {
 	resource := cim.store.Get(key)
 	err := lockResource(ctx.Logger, resource, ctx.Cancelation)
 	if err != nil {
@@ -192,7 +192,7 @@ func (cim *InputManager) lock(ctx v2.Context, key string) (*resource, error) {
 	return resource, nil
 }
 
-func lockResource(log *logp.Logger, resource *resource, canceler v2.Canceler) error {
+func lockResource(log *logp.Logger, resource *resource, canceler input.Canceler) error {
 	if !resource.lock.TryLock() {
 		log.Infof("Resource '%v' currently in use, waiting...", resource.key)
 		err := resource.lock.LockContext(canceler)

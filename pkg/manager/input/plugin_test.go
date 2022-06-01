@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package v2
+package input
 
 import (
 	"testing"
 
-	"github.com/elastic/beats/v7/libbeat/feature"
+	"github.com/elastic/elastic-agent-inputs/pkg/feature"
 )
 
 func TestPlugin_Validate(t *testing.T) {

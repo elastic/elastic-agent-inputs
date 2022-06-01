@@ -42,7 +42,7 @@ type Featurable interface {
 	// of the method is type checked by the 'FindFactory' of each namespace.
 	Factory() interface{}
 
-	// Description return the avaiable information for a specific feature.
+	// Description return the available information for a specific feature.
 	Description() Details
 
 	String() string
@@ -71,7 +71,7 @@ func (f *Feature) Factory() interface{} {
 	return f.factory
 }
 
-// Description return the avaiable information for a specific feature.
+// Description return the available information for a specific feature.
 func (f *Feature) Description() Details {
 	return f.description
 }

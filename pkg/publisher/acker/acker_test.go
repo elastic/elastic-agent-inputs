@@ -15,18 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
+//nolint:dupl // tests are equivalent
 package acker
 
 import (
 	"testing"
 
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	"github.com/stretchr/testify/require"
-
-	"github.com/elastic/beats/v7/libbeat/beat"
 )
 
 type fakeACKer struct {
-	AddEventFunc  func(event beat.Event, published bool)
+	AddEventFunc  func(event publisher.Event, published bool)
 	ACKEventsFunc func(n int)
 	CloseFunc     func()
 }
@@ -36,8 +36,8 @@ func TestNil(t *testing.T) {
 	require.NotNil(t, acker)
 
 	// check acker can be used without panic:
-	acker.AddEvent(beat.Event{}, false)
-	acker.AddEvent(beat.Event{}, true)
+	acker.AddEvent(publisher.Event{}, false)
+	acker.AddEvent(publisher.Event{}, true)
 	acker.ACKEvents(3)
 	acker.Close()
 }
@@ -54,7 +54,7 @@ func TestCounting(t *testing.T) {
 func TestTracking(t *testing.T) {
 	t.Run("dropped event is acked immediately if empty", func(t *testing.T) {
 		var acked, total int
-		TrackingCounter(func(a, t int) { acked, total = a, t }).AddEvent(beat.Event{}, false)
+		TrackingCounter(func(a, t int) { acked, total = a, t }).AddEvent(publisher.Event{}, false)
 		require.Equal(t, 0, acked)
 		require.Equal(t, 1, total)
 	})
@@ -62,8 +62,8 @@ func TestTracking(t *testing.T) {
 	t.Run("no dropped events", func(t *testing.T) {
 		var acked, total int
 		acker := TrackingCounter(func(a, t int) { acked, total = a, t })
-		acker.AddEvent(beat.Event{}, true)
-		acker.AddEvent(beat.Event{}, true)
+		acker.AddEvent(publisher.Event{}, true)
+		acker.AddEvent(publisher.Event{}, true)
 		acker.ACKEvents(2)
 		require.Equal(t, 2, acked)
 		require.Equal(t, 2, total)
@@ -72,10 +72,10 @@ func TestTracking(t *testing.T) {
 	t.Run("acking published includes dropped events in middle", func(t *testing.T) {
 		var acked, total int
 		acker := TrackingCounter(func(a, t int) { acked, total = a, t })
-		acker.AddEvent(beat.Event{}, true)
-		acker.AddEvent(beat.Event{}, false)
-		acker.AddEvent(beat.Event{}, false)
-		acker.AddEvent(beat.Event{}, true)
+		acker.AddEvent(publisher.Event{}, true)
+		acker.AddEvent(publisher.Event{}, false)
+		acker.AddEvent(publisher.Event{}, false)
+		acker.AddEvent(publisher.Event{}, true)
 		acker.ACKEvents(2)
 		require.Equal(t, 2, acked)
 		require.Equal(t, 4, total)
@@ -84,11 +84,11 @@ func TestTracking(t *testing.T) {
 	t.Run("acking published includes dropped events at end of ACK interval", func(t *testing.T) {
 		var acked, total int
 		acker := TrackingCounter(func(a, t int) { acked, total = a, t })
-		acker.AddEvent(beat.Event{}, true)
-		acker.AddEvent(beat.Event{}, true)
-		acker.AddEvent(beat.Event{}, false)
-		acker.AddEvent(beat.Event{}, false)
-		acker.AddEvent(beat.Event{}, true)
+		acker.AddEvent(publisher.Event{}, true)
+		acker.AddEvent(publisher.Event{}, true)
+		acker.AddEvent(publisher.Event{}, false)
+		acker.AddEvent(publisher.Event{}, false)
+		acker.AddEvent(publisher.Event{}, true)
 		acker.ACKEvents(2)
 		require.Equal(t, 2, acked)
 		require.Equal(t, 4, total)
@@ -97,13 +97,13 @@ func TestTracking(t *testing.T) {
 	t.Run("partial ACKs", func(t *testing.T) {
 		var acked, total int
 		acker := TrackingCounter(func(a, t int) { acked, total = a, t })
-		acker.AddEvent(beat.Event{}, true)
-		acker.AddEvent(beat.Event{}, true)
-		acker.AddEvent(beat.Event{}, true)
-		acker.AddEvent(beat.Event{}, true)
-		acker.AddEvent(beat.Event{}, false)
-		acker.AddEvent(beat.Event{}, true)
-		acker.AddEvent(beat.Event{}, true)
+		acker.AddEvent(publisher.Event{}, true)
+		acker.AddEvent(publisher.Event{}, true)
+		acker.AddEvent(publisher.Event{}, true)
+		acker.AddEvent(publisher.Event{}, true)
+		acker.AddEvent(publisher.Event{}, false)
+		acker.AddEvent(publisher.Event{}, true)
+		acker.AddEvent(publisher.Event{}, true)
 
 		acker.ACKEvents(2)
 		require.Equal(t, 2, acked)
@@ -120,7 +120,7 @@ func TestEventPrivateReporter(t *testing.T) {
 		var acked int
 		var data []interface{}
 		acker := EventPrivateReporter(func(a int, d []interface{}) { acked, data = a, d })
-		acker.AddEvent(beat.Event{Private: 1}, false)
+		acker.AddEvent(publisher.Event{Private: 1}, false)
 		require.Equal(t, 0, acked)
 		require.Equal(t, []interface{}{1}, data)
 	})
@@ -129,9 +129,9 @@ func TestEventPrivateReporter(t *testing.T) {
 		var acked int
 		var data []interface{}
 		acker := EventPrivateReporter(func(a int, d []interface{}) { acked, data = a, d })
-		acker.AddEvent(beat.Event{Private: 1}, true)
-		acker.AddEvent(beat.Event{Private: 2}, true)
-		acker.AddEvent(beat.Event{Private: 3}, true)
+		acker.AddEvent(publisher.Event{Private: 1}, true)
+		acker.AddEvent(publisher.Event{Private: 2}, true)
+		acker.AddEvent(publisher.Event{Private: 3}, true)
 		acker.ACKEvents(3)
 		require.Equal(t, 3, acked)
 		require.Equal(t, []interface{}{1, 2, 3}, data)
@@ -141,9 +141,9 @@ func TestEventPrivateReporter(t *testing.T) {
 		var acked int
 		var data []interface{}
 		acker := EventPrivateReporter(func(a int, d []interface{}) { acked, data = a, d })
-		acker.AddEvent(beat.Event{Private: 1}, true)
-		acker.AddEvent(beat.Event{Private: 2}, false)
-		acker.AddEvent(beat.Event{Private: 3}, true)
+		acker.AddEvent(publisher.Event{Private: 1}, true)
+		acker.AddEvent(publisher.Event{Private: 2}, false)
+		acker.AddEvent(publisher.Event{Private: 3}, true)
 		acker.ACKEvents(2)
 		require.Equal(t, 2, acked)
 		require.Equal(t, []interface{}{1, 2, 3}, data)
@@ -155,7 +155,7 @@ func TestLastEventPrivateReporter(t *testing.T) {
 		var acked int
 		var datum interface{}
 		acker := LastEventPrivateReporter(func(a int, d interface{}) { acked, datum = a, d })
-		acker.AddEvent(beat.Event{Private: 1}, false)
+		acker.AddEvent(publisher.Event{Private: 1}, false)
 		require.Equal(t, 0, acked)
 		require.Equal(t, 1, datum)
 	})
@@ -163,7 +163,7 @@ func TestLastEventPrivateReporter(t *testing.T) {
 	t.Run("dropped event without private is ignored", func(t *testing.T) {
 		var called bool
 		acker := LastEventPrivateReporter(func(_ int, _ interface{}) { called = true })
-		acker.AddEvent(beat.Event{Private: nil}, false)
+		acker.AddEvent(publisher.Event{Private: nil}, false)
 		require.False(t, called)
 	})
 
@@ -171,9 +171,9 @@ func TestLastEventPrivateReporter(t *testing.T) {
 		var acked int
 		var data interface{}
 		acker := LastEventPrivateReporter(func(a int, d interface{}) { acked, data = a, d })
-		acker.AddEvent(beat.Event{Private: 1}, true)
-		acker.AddEvent(beat.Event{Private: 2}, true)
-		acker.AddEvent(beat.Event{Private: 3}, true)
+		acker.AddEvent(publisher.Event{Private: 1}, true)
+		acker.AddEvent(publisher.Event{Private: 2}, true)
+		acker.AddEvent(publisher.Event{Private: 3}, true)
 		acker.ACKEvents(3)
 		require.Equal(t, 3, acked)
 		require.Equal(t, 3, data)
@@ -184,7 +184,7 @@ func TestCombine(t *testing.T) {
 	t.Run("AddEvent distributes", func(t *testing.T) {
 		var a1, a2 int
 		acker := Combine(countACKerOps(&a1, nil, nil), countACKerOps(&a2, nil, nil))
-		acker.AddEvent(beat.Event{}, true)
+		acker.AddEvent(publisher.Event{}, true)
 		require.Equal(t, 1, a1)
 		require.Equal(t, 1, a2)
 	})
@@ -223,15 +223,15 @@ func TestConnectionOnly(t *testing.T) {
 	})
 }
 
-func countACKerOps(add, acked, close *int) beat.ACKer {
+func countACKerOps(add, acked, close *int) publisher.ACKer {
 	return &fakeACKer{
-		AddEventFunc:  func(_ beat.Event, _ bool) { *add++ },
+		AddEventFunc:  func(_ publisher.Event, _ bool) { *add++ },
 		ACKEventsFunc: func(_ int) { *acked++ },
 		CloseFunc:     func() { *close++ },
 	}
 }
 
-func (f *fakeACKer) AddEvent(event beat.Event, published bool) {
+func (f *fakeACKer) AddEvent(event publisher.Event, published bool) {
 	if f.AddEventFunc != nil {
 		f.AddEventFunc(event, published)
 	}

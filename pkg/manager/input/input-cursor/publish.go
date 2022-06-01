@@ -20,17 +20,17 @@ package cursor
 import (
 	"time"
 
-	input "github.com/elastic/beats/v7/filebeat/input/v2"
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common/transform/typeconv"
-	"github.com/elastic/beats/v7/libbeat/statestore"
+	"github.com/elastic/elastic-agent-inputs/pkg/manager/input"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore"
+	"github.com/elastic/elastic-agent-libs/transform/typeconv"
 )
 
 // Publisher is used to publish an event and update the cursor in a single call to Publish.
 // Inputs are allowed to pass `nil` as cursor state. In this case the state is not updated, but the
 // event will still be published as is.
 type Publisher interface {
-	Publish(event beat.Event, cursor interface{}) error
+	Publish(event publisher.Event, cursor interface{}) error
 }
 
 // cursorPublisher implements the Publisher interface and used internally by the managedInput.
@@ -40,7 +40,7 @@ type Publisher interface {
 // handler, persisting the pending update.
 type cursorPublisher struct {
 	canceler input.Canceler
-	client   beat.Client
+	client   publisher.Client
 	cursor   *Cursor
 }
 
@@ -63,7 +63,7 @@ type updateOp struct {
 // It overwrite event.Private with the update operation, before finally sending the event.
 // The ACK ordering in the publisher pipeline guarantees that update operations
 // will be ACKed and executed in the correct order.
-func (c *cursorPublisher) Publish(event beat.Event, cursorUpdate interface{}) error {
+func (c *cursorPublisher) Publish(event publisher.Event, cursorUpdate interface{}) error {
 	if cursorUpdate == nil {
 		return c.forward(event)
 	}
@@ -77,7 +77,7 @@ func (c *cursorPublisher) Publish(event beat.Event, cursorUpdate interface{}) er
 	return c.forward(event)
 }
 
-func (c *cursorPublisher) forward(event beat.Event) error {
+func (c *cursorPublisher) forward(event publisher.Event) error {
 	c.client.Publish(event)
 	if c.canceler == nil {
 		return nil
@@ -94,7 +94,7 @@ func createUpdateOp(store *store, resource *resource, updates interface{}) (*upd
 	cursor := resource.pendingCursor
 	if resource.activeCursorOperations == 0 {
 		var tmp interface{}
-		typeconv.Convert(&tmp, cursor)
+		_ = typeconv.Convert(&tmp, cursor)
 		resource.pendingCursor = tmp
 		cursor = tmp
 	}
@@ -133,7 +133,7 @@ func (op *updateOp) Execute(n uint) {
 		resource.cursor = resource.pendingCursor
 		resource.pendingCursor = nil
 	} else {
-		typeconv.Convert(&resource.cursor, op.delta)
+		_ = typeconv.Convert(&resource.cursor, op.delta)
 	}
 
 	if resource.internalState.Updated.Before(op.timestamp) {

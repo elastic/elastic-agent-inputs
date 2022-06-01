@@ -56,7 +56,7 @@
 // will trigger a checkpoint operation and reset the log file.
 //
 // The store might contain multiple data files, but only the last data file is
-// supposed to be valid. Older data files will continiously tried to be cleaned up
+// supposed to be valid. Older data files will continuously tried to be cleaned up
 // on checkpoint operations.
 // The data files filenames do include the change sequence number. Which allows
 // us to sort them by name. The checkpoint operation of memlog, writes the full

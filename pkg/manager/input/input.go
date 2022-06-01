@@ -15,12 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package v2
+package input
 
 import (
-	"github.com/elastic/beats/v7/libbeat/beat"
+	"time"
+
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
+	"github.com/gofrs/uuid"
 
 	"github.com/elastic/go-concert/unison"
 )
@@ -72,7 +75,25 @@ type Input interface {
 
 	// Run starts the data collection. Run must return an error only if the
 	// error is fatal making it impossible for the input to recover.
-	Run(Context, beat.PipelineConnector) error
+	Run(Context, publisher.PipelineConnector) error
+}
+
+// Info stores a input instance meta data.
+type Info struct {
+	Input       string    // The actual beat's name
+	IndexPrefix string    // The beat's index prefix in Elasticsearch.
+	Version     string    // The beat version. Defaults to the libbeat version when an implementation does not set a version
+	Name        string    // configured beat name
+	Hostname    string    // hostname
+	ID          uuid.UUID // ID assigned to beat machine
+	EphemeralID uuid.UUID // ID assigned to beat process invocation (PID)
+	FirstStart  time.Time // The time of the first start of the Beat.
+	StartTime   time.Time // The time of last start of the Beat. Updated when the Beat is started or restarted.
+
+	// Monitoring-related fields
+	Monitoring struct {
+		DefaultUsername string // The default username to be used to connect to Elasticsearch Monitoring
+	}
 }
 
 // Context provides the Input Run function with common environmental
@@ -86,7 +107,7 @@ type Context struct {
 	ID string
 
 	// Agent provides additional Beat info like instance ID or beat name.
-	Agent beat.Info
+	Agent Info
 
 	// Cancelation is used by Beats to signal the input to shutdown.
 	Cancelation Canceler
@@ -99,10 +120,10 @@ type TestContext struct {
 	// with labels that will identify logs for the input.
 	Logger *logp.Logger
 
-	// Agent provides additional Beat info like instance ID or beat name.
-	Agent beat.Info
+	// Agent provides additional info like instance ID or beat name.
+	Agent Info
 
-	// Cancelation is used by Beats to signal the input to shutdown.
+	// Cancelation is used by the binary to signal the input to shutdown.
 	Cancelation Canceler
 }
 

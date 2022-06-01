@@ -18,6 +18,7 @@
 package memlog
 
 import (
+	"errors"
 	"syscall"
 	"testing"
 )
@@ -57,7 +58,7 @@ func TestEnsureWriter_NonRetriableError(t *testing.T) {
 	bytes := []byte{1, 2, 3}
 	writer := &ensureWriter{errorWriter}
 	written, err := writer.Write(bytes)
-	if err != syscall.EINVAL {
+	if !errors.Is(err, syscall.EINVAL) {
 		t.Fatalf("ensureWriter should propagate nonretriable errors")
 	}
 	if written != 0 {

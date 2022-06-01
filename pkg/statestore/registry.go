@@ -20,7 +20,7 @@ package statestore
 import (
 	"sync"
 
-	"github.com/elastic/beats/v7/libbeat/statestore/backend"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore/backend"
 )
 
 // Registry manages multiple key-value stores.
@@ -67,7 +67,9 @@ func (r *Registry) Get(name string) (*Store, error) {
 		}
 
 		shared = newSharedStore(r, name, backend)
-		defer shared.Release()
+		defer func() {
+			_ = shared.Release()
+		}()
 
 		r.active[name] = shared
 		r.wg.Add(1)

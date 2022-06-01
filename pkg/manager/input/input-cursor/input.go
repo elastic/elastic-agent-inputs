@@ -28,10 +28,9 @@ import (
 	"github.com/elastic/go-concert/ctxtool"
 	"github.com/elastic/go-concert/unison"
 
-	input "github.com/elastic/beats/v7/filebeat/input/v2"
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common/acker"
-	"github.com/elastic/elastic-agent-libs/logp"
+	"github.com/elastic/elastic-agent-inputs/pkg/manager/input"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher/acker"
 )
 
 // Input interface for cursor based inputs. This interface must be implemented
@@ -102,7 +101,7 @@ func (inp *managedInput) testSource(ctx input.TestContext, source Source) (err e
 // issue, but not crash the whole process.
 func (inp *managedInput) Run(
 	ctx input.Context,
-	pipeline beat.PipelineConnector,
+	pipeline publisher.PipelineConnector,
 ) (err error) {
 	// Setup cancellation using a custom cancel context. All workers will be
 	// stopped if one failed badly by returning an error.
@@ -136,7 +135,7 @@ func (inp *managedInput) runSource(
 	ctx input.Context,
 	store *store,
 	source Source,
-	pipeline beat.PipelineConnector,
+	pipeline publisher.PipelineConnector,
 ) (err error) {
 	defer func() {
 		if v := recover(); v != nil {
@@ -145,9 +144,9 @@ func (inp *managedInput) runSource(
 		}
 	}()
 
-	client, err := pipeline.ConnectWith(beat.ClientConfig{
+	client, err := pipeline.ConnectWith(publisher.ClientConfig{
 		CloseRef:   ctx.Cancelation,
-		ACKHandler: newInputACKHandler(ctx.Logger),
+		ACKHandler: newInputACKHandler(),
 	})
 	if err != nil {
 		return err
@@ -164,8 +163,8 @@ func (inp *managedInput) runSource(
 	store.UpdateTTL(resource, inp.cleanTimeout)
 
 	cursor := makeCursor(store, resource)
-	publisher := &cursorPublisher{canceler: ctx.Cancelation, client: client, cursor: &cursor}
-	return inp.input.Run(ctx, source, cursor, publisher)
+	p := &cursorPublisher{canceler: ctx.Cancelation, client: client, cursor: &cursor}
+	return inp.input.Run(ctx, source, cursor, p)
 }
 
 func (inp *managedInput) createSourceID(s Source) string {
@@ -175,7 +174,7 @@ func (inp *managedInput) createSourceID(s Source) string {
 	return fmt.Sprintf("%v::%v", inp.manager.Type, s.Name())
 }
 
-func newInputACKHandler(log *logp.Logger) beat.ACKer {
+func newInputACKHandler() publisher.ACKer {
 	return acker.EventPrivateReporter(func(acked int, private []interface{}) {
 		var n uint
 		var last int

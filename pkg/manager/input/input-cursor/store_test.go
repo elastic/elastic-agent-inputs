@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/elastic/beats/v7/libbeat/statestore"
-	"github.com/elastic/beats/v7/libbeat/statestore/storetest"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore/storetest"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
 
@@ -45,7 +45,7 @@ func TestStore_OpenClose(t *testing.T) {
 		})
 		defer cleanup()
 
-		store := testOpenStore(t, "test", nil)
+		store := testOpenStore(t, nil)
 		store.Release()
 
 		require.True(t, closed)
@@ -57,7 +57,7 @@ func TestStore_OpenClose(t *testing.T) {
 	})
 
 	t.Run("load from empty", func(t *testing.T) {
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 		require.Equal(t, 0, len(storeMemorySnapshot(store)))
 		require.Equal(t, 0, len(storeInSyncSnapshot(store)))
@@ -69,7 +69,7 @@ func TestStore_OpenClose(t *testing.T) {
 			"test::key1": {Cursor: "2"},
 		}
 
-		store := testOpenStore(t, "test", createSampleStore(t, states))
+		store := testOpenStore(t, createSampleStore(t, states))
 		defer store.Release()
 
 		checkEqualStoreState(t, states, storeMemorySnapshot(store))
@@ -82,7 +82,7 @@ func TestStore_OpenClose(t *testing.T) {
 			"other::key": {Cursor: "2"},
 		}
 
-		store := testOpenStore(t, "test", createSampleStore(t, states))
+		store := testOpenStore(t, createSampleStore(t, states))
 		defer store.Release()
 
 		want := map[string]state{
@@ -96,7 +96,7 @@ func TestStore_OpenClose(t *testing.T) {
 func TestStore_Get(t *testing.T) {
 	t.Run("find existing resource", func(t *testing.T) {
 		cursorState := state{Cursor: "1"}
-		store := testOpenStore(t, "test", createSampleStore(t, map[string]state{
+		store := testOpenStore(t, createSampleStore(t, map[string]state{
 			"test::key0": cursorState,
 		}))
 		defer store.Release()
@@ -112,7 +112,7 @@ func TestStore_Get(t *testing.T) {
 	})
 
 	t.Run("access unknown resource", func(t *testing.T) {
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 
 		res := store.Get("test::key")
@@ -124,7 +124,7 @@ func TestStore_Get(t *testing.T) {
 	})
 
 	t.Run("same resource is returned", func(t *testing.T) {
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 
 		res1 := store.Get("test::key")
@@ -142,7 +142,7 @@ func TestStore_Get(t *testing.T) {
 func TestStore_UpdateTTL(t *testing.T) {
 	t.Run("add TTL for new entry to store", func(t *testing.T) {
 		// when creating a resource we set the TTL and insert a new key value pair without cursor value into the store:
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 
 		res := store.Get("test::key")
@@ -161,7 +161,7 @@ func TestStore_UpdateTTL(t *testing.T) {
 	})
 
 	t.Run("update TTL for in-sync resource does not overwrite state", func(t *testing.T) {
-		store := testOpenStore(t, "test", createSampleStore(t, map[string]state{
+		store := testOpenStore(t, createSampleStore(t, map[string]state{
 			"test::key": {
 				TTL:    1 * time.Second,
 				Cursor: "test",
@@ -196,7 +196,7 @@ func TestStore_UpdateTTL(t *testing.T) {
 				Cursor: "test",
 			},
 		})
-		store := testOpenStore(t, "test", backend)
+		store := testOpenStore(t, backend)
 		defer store.Release()
 
 		// create pending update operation
@@ -235,12 +235,12 @@ func closeStoreWith(fn func(s *store)) func() {
 	}
 }
 
-func testOpenStore(t *testing.T, prefix string, persistentStore StateStore) *store {
+func testOpenStore(t *testing.T, persistentStore StateStore) *store {
 	if persistentStore == nil {
 		persistentStore = createSampleStore(t, nil)
 	}
 
-	store, err := openStore(logp.NewLogger("test"), persistentStore, prefix)
+	store, err := openStore(logp.NewLogger("test"), persistentStore, "test")
 	if err != nil {
 		t.Fatalf("failed to open the store")
 	}
@@ -329,10 +329,8 @@ func storeInSyncSnapshot(store *store) map[string]state {
 // fails with Errorf if the state differ.
 //
 // Note: testify is too strict when comparing timestamp, better use checkEqualStoreState.
-func checkEqualStoreState(t *testing.T, want, got map[string]state) bool {
+func checkEqualStoreState(t *testing.T, want, got map[string]state) {
 	if d := cmp.Diff(want, got); d != "" {
 		t.Errorf("store state mismatch (-want +got):\n%s", d)
-		return false
 	}
-	return true
 }

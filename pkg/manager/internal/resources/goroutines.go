@@ -18,6 +18,7 @@
 package resources
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -61,12 +62,12 @@ func (c GoroutinesChecker) Check(t testing.TB) {
 
 func dumpGoroutines() {
 	profile := pprof.Lookup("goroutine")
-	profile.WriteTo(os.Stdout, 2)
+	_ = profile.WriteTo(os.Stdout, 2)
 }
 
 func (c GoroutinesChecker) check() error {
 	after, err := c.WaitUntilOriginalCount()
-	if err == ErrTimeout {
+	if errors.Is(err, ErrTimeout) {
 		return fmt.Errorf("possible goroutines leak, before: %d, after: %d", c.before, after)
 	}
 	return err

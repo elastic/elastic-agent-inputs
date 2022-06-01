@@ -18,50 +18,50 @@
 package testing
 
 import (
-	"github.com/elastic/beats/v7/libbeat/beat"
-	"github.com/elastic/beats/v7/libbeat/common/atomic"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
+	"github.com/elastic/elastic-agent-libs/atomic"
 )
 
-// ClientCounter can be used to create a beat.PipelineConnector that count
+// ClientCounter can be used to create a publisher.PipelineConnector that count
 // pipeline connects and disconnects.
 type ClientCounter struct {
 	total  atomic.Int
 	active atomic.Int
 }
 
-// FakeConnector implements the beat.PipelineConnector interface.
+// FakeConnector implements the publisher.PipelineConnector interface.
 // The ConnectFunc is called for each connection attempt, and must be provided
 // by tests that wish to use FakeConnector. If ConnectFunc is nil tests will panic
 // if there is a connection attempt.
 type FakeConnector struct {
-	ConnectFunc func(beat.ClientConfig) (beat.Client, error)
+	ConnectFunc func(publisher.ClientConfig) (publisher.Client, error)
 }
 
-// FakeClient implements the beat.Client interface. The implementation of a
+// FakeClient implements the publisher.Client interface. The implementation of a
 // custom PublishFunc and CloseFunc are optional.
 type FakeClient struct {
 	// If set PublishFunc is called for each event that is published by a producer.
-	PublishFunc func(beat.Event)
+	PublishFunc func(publisher.Event)
 
 	// If set CloseFunc is called on Close. Otherwise Close returns nil.
 	CloseFunc func() error
 }
 
-var _ beat.PipelineConnector = FakeConnector{}
-var _ beat.Client = (*FakeClient)(nil)
+var _ publisher.PipelineConnector = FakeConnector{}
+var _ publisher.Client = (*FakeClient)(nil)
 
 // ConnectWith calls the ConnectFunc with the given configuration.
-func (c FakeConnector) ConnectWith(cfg beat.ClientConfig) (beat.Client, error) {
+func (c FakeConnector) ConnectWith(cfg publisher.ClientConfig) (publisher.Client, error) {
 	return c.ConnectFunc(cfg)
 }
 
 // Connect calls the ConnectFunc with an empty configuration.
-func (c FakeConnector) Connect() (beat.Client, error) {
-	return c.ConnectWith(beat.ClientConfig{})
+func (c FakeConnector) Connect() (publisher.Client, error) {
+	return c.ConnectWith(publisher.ClientConfig{})
 }
 
 // Publish calls PublishFunc, if PublishFunc is not nil.
-func (c *FakeClient) Publish(event beat.Event) {
+func (c *FakeClient) Publish(event publisher.Event) {
 	if c.PublishFunc != nil {
 		c.PublishFunc(event)
 	}
@@ -76,7 +76,7 @@ func (c *FakeClient) Close() error {
 }
 
 // PublishAll calls PublishFunc for each event in the given slice.
-func (c *FakeClient) PublishAll(events []beat.Event) {
+func (c *FakeClient) PublishAll(events []publisher.Event) {
 	for _, event := range events {
 		c.Publish(event)
 	}
@@ -84,27 +84,27 @@ func (c *FakeClient) PublishAll(events []beat.Event) {
 
 // FailingConnector creates a pipeline that will always fail with the
 // configured error value.
-func FailingConnector(err error) beat.PipelineConnector {
+func FailingConnector(err error) publisher.PipelineConnector {
 	return &FakeConnector{
-		ConnectFunc: func(_ beat.ClientConfig) (beat.Client, error) {
+		ConnectFunc: func(_ publisher.ClientConfig) (publisher.Client, error) {
 			return nil, err
 		},
 	}
 }
 
-// ConstClient returns a pipeline that always returns the pre-configured beat.Client instance.
-func ConstClient(client beat.Client) beat.PipelineConnector {
+// ConstClient returns a pipeline that always returns the pre-configured publisher.Client instance.
+func ConstClient(client publisher.Client) publisher.PipelineConnector {
 	return &FakeConnector{
-		ConnectFunc: func(_ beat.ClientConfig) (beat.Client, error) {
+		ConnectFunc: func(_ publisher.ClientConfig) (publisher.Client, error) {
 			return client, nil
 		},
 	}
 }
 
-// ChClient create a beat.Client that will forward all events to the given channel.
-func ChClient(ch chan beat.Event) beat.Client {
+// ChClient create a publisher.Client that will forward all events to the given channel.
+func ChClient(ch chan publisher.Event) publisher.Client {
 	return &FakeClient{
-		PublishFunc: func(event beat.Event) {
+		PublishFunc: func(event publisher.Event) {
 			ch <- event
 		},
 	}
@@ -118,9 +118,9 @@ func (c *ClientCounter) Total() int { return c.total.Load() }
 
 // BuildConnector create a pipeline that updates the active and tocal
 // connection counters on Connect and Close calls.
-func (c *ClientCounter) BuildConnector() beat.PipelineConnector {
+func (c *ClientCounter) BuildConnector() publisher.PipelineConnector {
 	return FakeConnector{
-		ConnectFunc: func(_ beat.ClientConfig) (beat.Client, error) {
+		ConnectFunc: func(_ publisher.ClientConfig) (publisher.Client, error) {
 			c.total.Inc()
 			c.active.Inc()
 			return &FakeClient{

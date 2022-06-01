@@ -30,11 +30,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	input "github.com/elastic/beats/v7/filebeat/input/v2"
-	v2 "github.com/elastic/beats/v7/filebeat/input/v2"
-	"github.com/elastic/beats/v7/libbeat/beat"
-	pubtest "github.com/elastic/beats/v7/libbeat/publisher/testing"
-	"github.com/elastic/beats/v7/libbeat/tests/resources"
+	"github.com/elastic/elastic-agent-inputs/pkg/manager/input"
+	"github.com/elastic/elastic-agent-inputs/pkg/manager/internal/resources"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
+	pubtest "github.com/elastic/elastic-agent-inputs/pkg/publisher/testing"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/elastic-agent-libs/mapstr"
@@ -63,11 +62,11 @@ func TestManager_Init(t *testing.T) {
 			DefaultCleanTimeout: 10 * time.Millisecond,
 		}
 
-		err := manager.Init(&grp, v2.ModeRun)
+		err := manager.Init(&grp, input.ModeRun)
 		require.NoError(t, err)
 
 		time.Sleep(200 * time.Millisecond)
-		grp.Stop()
+		_ = grp.Stop()
 
 		// wait for all go-routines to be gone
 
@@ -86,7 +85,9 @@ func TestManager_Init(t *testing.T) {
 		store.GCPeriod = 10 * time.Millisecond
 
 		var grp unison.TaskGroup
-		defer grp.Stop()
+		defer func() {
+			_ = grp.Stop()
+		}()
 		manager := &InputManager{
 			Logger:              logp.NewLogger("test"),
 			StateStore:          store,
@@ -94,7 +95,7 @@ func TestManager_Init(t *testing.T) {
 			DefaultCleanTimeout: 10 * time.Millisecond,
 		}
 
-		err := manager.Init(&grp, v2.ModeRun)
+		err := manager.Init(&grp, input.ModeRun)
 		require.NoError(t, err)
 
 		for len(store.snapshot()) > 0 {
@@ -157,7 +158,7 @@ func TestManager_InputsTest(t *testing.T) {
 		defer resources.NewGoroutinesChecker().Check(t)
 
 		manager := constInput(t, sources, &fakeTestInput{
-			OnTest: func(source Source, _ v2.TestContext) error {
+			OnTest: func(source Source, _ input.TestContext) error {
 				mu.Lock()
 				defer mu.Unlock()
 				seen = append(seen, source.Name())
@@ -179,7 +180,7 @@ func TestManager_InputsTest(t *testing.T) {
 		defer resources.NewGoroutinesChecker().Check(t)
 
 		manager := constInput(t, sources, &fakeTestInput{
-			OnTest: func(_ Source, ctx v2.TestContext) error {
+			OnTest: func(_ Source, ctx input.TestContext) error {
 				<-ctx.Cancelation.Done()
 				return nil
 			},
@@ -209,7 +210,7 @@ func TestManager_InputsTest(t *testing.T) {
 		sources := []Source{failing, stringSource("source2")}
 
 		manager := constInput(t, sources, &fakeTestInput{
-			OnTest: func(source Source, _ v2.TestContext) error {
+			OnTest: func(source Source, _ input.TestContext) error {
 				if source == failing {
 					t.Log("return error")
 					return errors.New("oops")
@@ -238,7 +239,7 @@ func TestManager_InputsTest(t *testing.T) {
 		defer resources.NewGoroutinesChecker().Check(t)
 
 		manager := constInput(t, sources, &fakeTestInput{
-			OnTest: func(source Source, _ v2.TestContext) error {
+			OnTest: func(source Source, _ input.TestContext) error {
 				panic("oops")
 			},
 		})
@@ -278,7 +279,7 @@ func TestManager_InputsRun(t *testing.T) {
 		defer cancel()
 
 		var clientCounters pubtest.ClientCounter
-		err = inp.Run(v2.Context{
+		err = inp.Run(input.Context{
 			Logger:      manager.Logger,
 			Cancelation: cancelCtx,
 		}, clientCounters.BuildConnector())
@@ -302,7 +303,7 @@ func TestManager_InputsRun(t *testing.T) {
 		defer cancel()
 
 		var clientCounters pubtest.ClientCounter
-		err = inp.Run(v2.Context{
+		err = inp.Run(input.Context{
 			Logger:      manager.Logger,
 			Cancelation: cancelCtx,
 		}, clientCounters.BuildConnector())
@@ -331,7 +332,7 @@ func TestManager_InputsRun(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = inp.Run(v2.Context{
+			err = inp.Run(input.Context{
 				Logger:      manager.Logger,
 				Cancelation: cancelCtx,
 			}, clientCounters.BuildConnector())
@@ -348,7 +349,7 @@ func TestManager_InputsRun(t *testing.T) {
 
 		type runConfig struct{ Max int }
 
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 
 		manager := simpleManagerWithConfigure(t, func(cfg *conf.C) ([]Source, Input, error) {
@@ -367,9 +368,9 @@ func TestManager_InputsRun(t *testing.T) {
 					}
 
 					for i := 0; i < config.Max; i++ {
-						event := beat.Event{Fields: mapstr.M{"n": state.N}}
+						event := publisher.Event{Fields: mapstr.M{"n": state.N}}
 						state.N++
-						pub.Publish(event, state)
+						mustPublish(pub, event, state)
 					}
 					return nil
 				},
@@ -380,8 +381,11 @@ func TestManager_InputsRun(t *testing.T) {
 
 		var ids []int
 		pipeline := pubtest.ConstClient(&pubtest.FakeClient{
-			PublishFunc: func(event beat.Event) {
-				id := event.Fields["n"].(int)
+			PublishFunc: func(event publisher.Event) {
+				id, ok := event.Fields["n"].(int)
+				if !ok {
+					panic(fmt.Errorf("cannot convert id to int"))
+				}
 				ids = append(ids, id)
 			},
 		})
@@ -397,10 +401,11 @@ func TestManager_InputsRun(t *testing.T) {
 		// create and run second instance instance
 		inp, err = manager.Create(conf.MustNewConfigFrom(runConfig{Max: 3}))
 		require.NoError(t, err)
-		inp.Run(input.Context{
+		err = inp.Run(input.Context{
 			Logger:      log,
 			Cancelation: context.Background(),
 		}, pipeline)
+		assert.NoError(t, err)
 
 		// verify
 		assert.Equal(t, []int{0, 1, 2, 3, 4, 5}, ids)
@@ -416,13 +421,13 @@ func TestManager_InputsRun(t *testing.T) {
 			OnRun: func(ctx input.Context, _ Source, _ Cursor, pub Publisher) error {
 				defer wgSend.Done()
 				fields := mapstr.M{"hello": "world"}
-				pub.Publish(beat.Event{Fields: fields}, "test-cursor-state1")
-				pub.Publish(beat.Event{Fields: fields}, "test-cursor-state2")
-				pub.Publish(beat.Event{Fields: fields}, "test-cursor-state3")
-				pub.Publish(beat.Event{Fields: fields}, nil)
-				pub.Publish(beat.Event{Fields: fields}, "test-cursor-state4")
-				pub.Publish(beat.Event{Fields: fields}, "test-cursor-state5")
-				pub.Publish(beat.Event{Fields: fields}, "test-cursor-state6")
+				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state1")
+				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state2")
+				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state3")
+				mustPublish(pub, publisher.Event{Fields: fields}, nil)
+				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state4")
+				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state5")
+				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state6")
 				return nil
 			},
 		})
@@ -435,15 +440,15 @@ func TestManager_InputsRun(t *testing.T) {
 		defer cancel()
 
 		// setup publishing pipeline and capture ACKer, so we can simulate progress in the Output
-		var acker beat.ACKer
+		var acker publisher.ACKer
 		var wgACKer sync.WaitGroup
 		wgACKer.Add(1)
 		pipeline := &pubtest.FakeConnector{
-			ConnectFunc: func(cfg beat.ClientConfig) (beat.Client, error) {
+			ConnectFunc: func(cfg publisher.ClientConfig) (publisher.Client, error) {
 				defer wgACKer.Done()
 				acker = cfg.ACKHandler
 				return &pubtest.FakeClient{
-					PublishFunc: func(event beat.Event) {
+					PublishFunc: func(event publisher.Event) {
 						acker.AddEvent(event, true)
 					},
 				}, nil
@@ -455,7 +460,7 @@ func TestManager_InputsRun(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = inp.Run(v2.Context{
+			err = inp.Run(input.Context{
 				Logger:      manager.Logger,
 				Cancelation: cancelCtx,
 			}, pipeline)
@@ -488,9 +493,16 @@ func TestManager_InputsRun(t *testing.T) {
 	})
 }
 
+func mustPublish(p Publisher, e publisher.Event, cursor interface{}) {
+	err := p.Publish(e, cursor)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func TestLockResource(t *testing.T) {
 	t.Run("can lock unused resource", func(t *testing.T) {
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 
 		res := store.Get("test::key")
@@ -501,7 +513,7 @@ func TestLockResource(t *testing.T) {
 	t.Run("fail to lock resource in use when context is cancelled", func(t *testing.T) {
 		log := logp.NewLogger("test")
 
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 
 		resUsed := store.Get("test::key")
@@ -524,7 +536,7 @@ func TestLockResource(t *testing.T) {
 	t.Run("succeed to lock resource after it has been released", func(t *testing.T) {
 		log := logp.NewLogger("test")
 
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 
 		resUsed := store.Get("test::key")

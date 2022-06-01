@@ -22,13 +22,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/elastic/beats/v7/libbeat/statestore/backend"
-	"github.com/elastic/beats/v7/libbeat/statestore/internal/storecompliance"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore/backend"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore/internal/storecompliance"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
 
 func init() {
-	logp.DevelopmentSetup()
+	err := logp.DevelopmentSetup()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func TestCompliance(t *testing.T) {

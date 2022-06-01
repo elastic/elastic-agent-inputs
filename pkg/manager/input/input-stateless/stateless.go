@@ -23,8 +23,8 @@ import (
 
 	"github.com/elastic/go-concert/unison"
 
-	v2 "github.com/elastic/beats/v7/filebeat/input/v2"
-	"github.com/elastic/beats/v7/libbeat/beat"
+	"github.com/elastic/elastic-agent-inputs/pkg/manager/input"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	conf "github.com/elastic/elastic-agent-libs/config"
 )
 
@@ -37,32 +37,32 @@ type InputManager struct {
 // Input is the interface transient inputs are required to implemented.
 type Input interface {
 	Name() string
-	Test(v2.TestContext) error
-	Run(ctx v2.Context, publish Publisher) error
+	Test(input.TestContext) error
+	Run(ctx input.Context, publish Publisher) error
 }
 
 // Publisher is used by the Input to emit events.
 type Publisher interface {
-	Publish(beat.Event)
+	Publish(publisher.Event)
 }
 
 type configuredInput struct {
 	input Input
 }
 
-var _ v2.InputManager = InputManager{}
+var _ input.InputManager = InputManager{}
 
 // NewInputManager wraps the given configure function to create a new stateless input manager.
 func NewInputManager(configure func(*conf.C) (Input, error)) InputManager {
 	return InputManager{Configure: configure}
 }
 
-// Init does nothing. Init is required to fullfil the v2.InputManager interface.
-func (m InputManager) Init(_ unison.Group, _ v2.Mode) error { return nil }
+// Init does nothing. Init is required to fullfil the input.InputManager interface.
+func (m InputManager) Init(_ unison.Group, _ input.Mode) error { return nil }
 
 // Create configures a transient input and ensures that the final input can be used with
 // with the filebeat input architecture.
-func (m InputManager) Create(cfg *conf.C) (v2.Input, error) {
+func (m InputManager) Create(cfg *conf.C) (input.Input, error) {
 	inp, err := m.Configure(cfg)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (m InputManager) Create(cfg *conf.C) (v2.Input, error) {
 
 func (si configuredInput) Name() string { return si.input.Name() }
 
-func (si configuredInput) Run(ctx v2.Context, pipeline beat.PipelineConnector) (err error) {
+func (si configuredInput) Run(ctx input.Context, pipeline publisher.PipelineConnector) (err error) {
 	defer func() {
 		if v := recover(); v != nil {
 			if e, ok := v.(error); ok {
@@ -83,8 +83,8 @@ func (si configuredInput) Run(ctx v2.Context, pipeline beat.PipelineConnector) (
 		}
 	}()
 
-	client, err := pipeline.ConnectWith(beat.ClientConfig{
-		PublishMode: beat.DefaultGuarantees,
+	client, err := pipeline.ConnectWith(publisher.ClientConfig{
+		PublishMode: publisher.DefaultGuarantees,
 
 		// configure pipeline to disconnect input on stop signal.
 		CloseRef: ctx.Cancelation,
@@ -97,6 +97,6 @@ func (si configuredInput) Run(ctx v2.Context, pipeline beat.PipelineConnector) (
 	return si.input.Run(ctx, client)
 }
 
-func (si configuredInput) Test(ctx v2.TestContext) error {
+func (si configuredInput) Test(ctx input.TestContext) error {
 	return si.input.Test(ctx)
 }

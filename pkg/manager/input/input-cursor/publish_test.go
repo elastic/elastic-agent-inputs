@@ -24,37 +24,39 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/elastic/beats/v7/libbeat/beat"
-	pubtest "github.com/elastic/beats/v7/libbeat/publisher/testing"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
+	pubtest "github.com/elastic/elastic-agent-inputs/pkg/publisher/testing"
 )
 
 func TestPublish(t *testing.T) {
 	t.Run("event with cursor state creates update operation", func(t *testing.T) {
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 		cursor := makeCursor(store, store.Get("test::key"))
 
-		var actual beat.Event
+		var actual publisher.Event
 		client := &pubtest.FakeClient{
-			PublishFunc: func(event beat.Event) { actual = event },
+			PublishFunc: func(event publisher.Event) { actual = event },
 		}
-		publisher := cursorPublisher{nil, client, &cursor}
-		publisher.Publish(beat.Event{}, "test")
+		p := cursorPublisher{nil, client, &cursor}
+		err := p.Publish(publisher.Event{}, "test")
+		require.NoError(t, err)
 
 		require.NotNil(t, actual.Private)
 	})
 
 	t.Run("event without cursor creates no update operation", func(t *testing.T) {
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 		cursor := makeCursor(store, store.Get("test::key"))
 
-		var actual beat.Event
+		var actual publisher.Event
 		client := &pubtest.FakeClient{
-			PublishFunc: func(event beat.Event) { actual = event },
+			PublishFunc: func(event publisher.Event) { actual = event },
 		}
-		publisher := cursorPublisher{nil, client, &cursor}
-		publisher.Publish(beat.Event{}, nil)
+		p := cursorPublisher{nil, client, &cursor}
+		err := p.Publish(publisher.Event{}, nil)
+		require.NoError(t, err)
 		require.Nil(t, actual.Private)
 	})
 
@@ -62,19 +64,19 @@ func TestPublish(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.TODO())
 		cancel()
 
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 		cursor := makeCursor(store, store.Get("test::key"))
 
-		publisher := cursorPublisher{ctx, &pubtest.FakeClient{}, &cursor}
-		err := publisher.Publish(beat.Event{}, nil)
+		p := cursorPublisher{ctx, &pubtest.FakeClient{}, &cursor}
+		err := p.Publish(publisher.Event{}, nil)
 		require.Equal(t, context.Canceled, err)
 	})
 }
 
 func TestOp_Execute(t *testing.T) {
 	t.Run("applying final op marks the key as finished", func(t *testing.T) {
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 		res := store.Get("test::key")
 
@@ -99,7 +101,7 @@ func TestOp_Execute(t *testing.T) {
 		// when acking N events, intermediate updates are dropped in favor of the latest update operation.
 		// This test checks that the resource is correctly marked as finished.
 
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 		res := store.Get("test::key")
 
@@ -125,7 +127,7 @@ func TestOp_Execute(t *testing.T) {
 		// when acking N events, intermediate updates are dropped in favor of the latest update operation.
 		// This test checks that the resource is correctly marked as finished.
 
-		store := testOpenStore(t, "test", createSampleStore(t, nil))
+		store := testOpenStore(t, createSampleStore(t, nil))
 		defer store.Release()
 		res := store.Get("test::key")
 

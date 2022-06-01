@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/elastic/beats/v7/libbeat/statestore/backend"
+	"github.com/elastic/elastic-agent-inputs/pkg/statestore/backend"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
 

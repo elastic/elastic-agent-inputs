@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package v2
+package input
 
 import (
 	"fmt"
 
-	"github.com/elastic/beats/v7/libbeat/feature"
+	"github.com/elastic/elastic-agent-inputs/pkg/feature"
 )
 
 // Plugin describes an input type. Input types should provide a constructor

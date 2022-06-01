@@ -31,7 +31,7 @@ func TestGCStore(t *testing.T) {
 		started := time.Now()
 
 		backend := createSampleStore(t, nil)
-		store := testOpenStore(t, "test", backend)
+		store := testOpenStore(t, backend)
 		defer store.Release()
 
 		gcStore(logp.NewLogger("test"), started, store)
@@ -52,7 +52,7 @@ func TestGCStore(t *testing.T) {
 		}
 
 		backend := createSampleStore(t, initState)
-		store := testOpenStore(t, "test", backend)
+		store := testOpenStore(t, backend)
 		defer store.Release()
 
 		gcStore(logp.NewLogger("test"), started, store)
@@ -72,7 +72,7 @@ func TestGCStore(t *testing.T) {
 		}
 
 		backend := createSampleStore(t, initState)
-		store := testOpenStore(t, "test", backend)
+		store := testOpenStore(t, backend)
 		defer store.Release()
 
 		gcStore(logp.NewLogger("test"), started, store)
@@ -93,7 +93,7 @@ func TestGCStore(t *testing.T) {
 		}
 
 		backend := createSampleStore(t, initState)
-		store := testOpenStore(t, "test", backend)
+		store := testOpenStore(t, backend)
 		defer store.Release()
 
 		gcStore(logp.NewLogger("test"), started, store)
@@ -113,7 +113,7 @@ func TestGCStore(t *testing.T) {
 		}
 
 		backend := createSampleStore(t, initState)
-		store := testOpenStore(t, "test", backend)
+		store := testOpenStore(t, backend)
 		defer store.Release()
 
 		// access resource and check it is not gc'ed
@@ -140,7 +140,7 @@ func TestGCStore(t *testing.T) {
 		}
 
 		backend := createSampleStore(t, initState)
-		store := testOpenStore(t, "test", backend)
+		store := testOpenStore(t, backend)
 		defer store.Release()
 
 		// create pending update operation

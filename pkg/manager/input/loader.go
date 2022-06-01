@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package v2
+package input
 
 import (
 	"fmt"
 
-	"github.com/elastic/beats/v7/libbeat/feature"
+	"github.com/elastic/elastic-agent-inputs/pkg/feature"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/go-concert/unison"

@@ -22,14 +22,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/elastic/beats/v7/libbeat/beat"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	"github.com/elastic/elastic-agent-libs/mapstr"
 )
 
 var cnt = 0
 
-func testEvent() beat.Event {
-	event := beat.Event{
+func testEvent() publisher.Event {
+	event := publisher.Event{
 		Fields: mapstr.M{
 			"message": "test",
 			"idx":     cnt,
@@ -52,7 +52,7 @@ func TestChanClientPublishEvents(t *testing.T) {
 	cc := NewChanClient(1)
 
 	e1, e2 := testEvent(), testEvent()
-	go cc.PublishAll([]beat.Event{e1, e2})
+	go cc.PublishAll([]publisher.Event{e1, e2})
 	assert.Equal(t, e1, cc.ReceiveEvent())
 	assert.Equal(t, e2, cc.ReceiveEvent())
 }
