@@ -2,7 +2,7 @@
 - job:
     name: "elastic-agent-inputs-mbp"
     display-name: elastic-agent-inputs
-    description: elastic-agent-inputs
+    description: elastic-agent-inputs.
     project-type: multibranch
     script-path: .ci/Jenkinsfile
     scm:
