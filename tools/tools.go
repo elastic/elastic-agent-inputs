@@ -20,4 +20,7 @@
 
 package tools
 
-import _ "go.elastic.co/go-licence-detector"
+import (
+	_ "github.com/elastic/go-licenser"
+	_ "go.elastic.co/go-licence-detector"
+)

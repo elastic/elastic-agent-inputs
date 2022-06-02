@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/elastic/elastic-agent-libs v0.2.4
 	github.com/elastic/go-concert v0.2.0
+	github.com/elastic/go-licenser v0.4.0
 	github.com/elastic/go-structform v0.0.9
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/google/go-cmp v0.5.6
