@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/elastic/elastic-agent-libs v0.2.4
+	github.com/elastic/go-licenser v0.4.0
 	github.com/magefile/mage v1.13.0
 	go.elastic.co/go-licence-detector v0.5.0
 )
