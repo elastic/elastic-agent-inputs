@@ -57,25 +57,24 @@ pipeline {
     //    }
     //  }
     //}
-    // There is nothing to test. Step must be enabled when we add code.
-    //stage('Test') {
-    //  steps {
-    //    withGithubNotify(context: "Test") {
-    //      deleteDir()
-    //      unstash 'source'
-    //      dir("${BASE_DIR}"){
-    //        withGoEnv(){
-    //          goTestJUnit(options: '-v ./...', output: 'junit-report.xml')
-    //        }
-    //      }
-    //    }
-    //  }
-    //  post {
-    //    always {
-    //      junit(allowEmptyResults: true, keepLongStdio: true, testResults: '**/junit-report.xml')
-    //    }
-    //  }
-    //}
+    stage('Test') {
+      steps {
+        withGithubNotify(context: "Test") {
+          deleteDir()
+          unstash 'source'
+          dir("${BASE_DIR}"){
+            withGoEnv(){
+              goTestJUnit(options: '-v ./...', output: 'junit-report.xml')
+            }
+          }
+        }
+      }
+      post {
+        always {
+          junit(allowEmptyResults: true, keepLongStdio: true, testResults: '**/junit-report.xml')
+        }
+      }
+    }
   }
   post {
     cleanup {
