@@ -6,6 +6,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Move initial version of input package from Filebeat. #17
+
 ### Changed
 
 ### Deprecated
