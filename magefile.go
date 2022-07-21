@@ -53,7 +53,7 @@ func Fmt() {
 	mg.Deps(AddLicenseHeaders)
 }
 
-// AddLicenseHeaders adds ASL2 headers to .go files
+// AddLicenseHeaders adds Elastic V2 headers to .go files
 func AddLicenseHeaders() error {
 	fmt.Println(">> fmt - go-licenser: Adding missing headers")
 
@@ -62,11 +62,11 @@ func AddLicenseHeaders() error {
 	licenser := gotool.Licenser
 
 	return licenser(
-		licenser.License("ASL2"),
+		licenser.License("Elastic"),
 	)
 }
 
-// CheckLicenseHeaders checks ASL2 headers in .go files
+// CheckLicenseHeaders checks Elastic V2 headers in .go files
 func CheckLicenseHeaders() error {
 	mg.Deps(devtools.InstallGoLicenser)
 
@@ -74,7 +74,7 @@ func CheckLicenseHeaders() error {
 
 	return licenser(
 		licenser.Check(),
-		licenser.License("ASL2"),
+		licenser.License("Elastic"),
 	)
 }
 
