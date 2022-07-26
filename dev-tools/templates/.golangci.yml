@@ -1,7 +1,7 @@
 # options for analysis running
 run:
   # timeout for analysis, e.g. 30s, 5m, default is 1m
-  timeout: 15m
+  timeout: 2m
 
 issues:
   # Maximum count of issues with the same text.
@@ -12,12 +12,6 @@ issues:
   # Set to 0 to disable.
   # Default: 50
   max-issues-per-linter: 50
-  exclude-rules:
-    # Exclude package name contains '-' issue because we have at least one package with
-    # it on its name.
-    - text: "ST1003:"
-      linters:
-        - stylecheck
 
 output:
   sort-results: true
@@ -39,6 +33,7 @@ linters:
     - goconst # finds repeated strings that could be replaced by a constant
     - dupl # tool for code clone detection
     - forbidigo # forbids identifiers	matched by reg exps
+    - gomoddirectives # manage the use of 'replace', 'retract', and 'excludes' directives in go.mod.
     - gosimple # linter for Go source code that specializes in simplifying a code
     - misspell # finds commonly misspelled English words in comments
     - nakedret # finds naked returns in functions greater than a specified function length
@@ -100,6 +95,10 @@ linters-settings:
     # Exclude godoc examples from forbidigo checks.  Default is true.
     exclude_godoc_examples: true
 
+  gomoddirectives:
+    # Allow local `replace` directives. Default is false.
+    replace-local: false
+
   goimports:
     local-prefixes: github.com/elastic
 
@@ -114,6 +113,11 @@ linters-settings:
               - errors
               - fmt
             reason: "This package is deprecated, use `fmt.Errorf` with `%w` instead"
+        - io/ioutil:
+            recommendations:
+              - io
+              - os
+            reason: "The package is deprecated, use `io` or `so` instead."
 
   gosimple:
     # Select the Go version to target. The default is '1.13'.
@@ -148,11 +152,12 @@ linters-settings:
     # Enable to require an explanation of nonzero length after each nolint directive. Default is false.
     require-explanation: true
     # Enable to require nolint directives to mention the specific linter being suppressed. Default is false.
-    require-specific: false
+    require-specific: true
 
   staticcheck:
     # Select the Go version to target. The default is '1.13'.
     go: "{{.GoVersion}}"
+    # https://staticcheck.io/docs/options#checks
     checks: ["all"]
 
   stylecheck:
