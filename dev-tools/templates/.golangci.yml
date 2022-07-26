@@ -62,6 +62,7 @@ linters:
     - wastedassign # wastedassign finds wasted assignment statements.
     - godox # tool for detection of FIXME, TODO and other comment keywords
     - gomodguard # check for blocked dependencies
+    - depguard
 
 # all available settings of specific linters
 linters-settings:
@@ -113,11 +114,12 @@ linters-settings:
               - errors
               - fmt
             reason: "This package is deprecated, use `fmt.Errorf` with `%w` instead"
-        - io/ioutil:
-            recommendations:
-              - io
-              - os
-            reason: "The package is deprecated, use `io` or `so` instead."
+  depguard:
+    list-type:: denylist
+    # Check the list against standard lib.
+    include-go-root: true
+    packages-with-error-message:
+      - io/ioutil: "The package is deprecated, use `io` or `so` instead."
 
   gosimple:
     # Select the Go version to target. The default is '1.13'.
