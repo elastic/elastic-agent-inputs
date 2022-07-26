@@ -7,11 +7,11 @@ package input
 import (
 	"time"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
-	"github.com/gofrs/uuid"
-
 	"github.com/elastic/go-concert/unison"
 )
 
