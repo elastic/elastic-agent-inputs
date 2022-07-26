@@ -15,7 +15,7 @@ your questions there. In additional to awesome, knowledgeable community
 contributors, core Elastic-Agent-Inputs developers are on the forums every single day to help
 you out.
 
-The forums are here: https://discuss.elastic.co/c/beats
+The forums are here: https://discuss.elastic.co/c/elastic-stack/elastic-agent
 
 We can't stop you from opening an issue here, but it will likely
 linger without a response for days or weeks before it is closed and we

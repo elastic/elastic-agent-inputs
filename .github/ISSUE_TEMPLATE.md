@@ -1,10 +1,10 @@
 ---
 name: Bug
-about: "Report confirmed bugs. For unconfirmed bugs please visit https://discuss.elastic.co/c/beats"
+about: "Report confirmed bugs. For unconfirmed bugs please visit https://discuss.elastic.co/c/elastic-stack/elastic-agent"
 
 ---
 
-Please post all questions and issues on https://discuss.elastic.co/c/beats
+Please post all questions and issues on https://discuss.elastic.co/c/elastic-stack/elastic-agent
 before opening a Github Issue. Your questions will reach a wider audience there,
 and if we confirm that there is a bug, then you can open a new issue.
 
