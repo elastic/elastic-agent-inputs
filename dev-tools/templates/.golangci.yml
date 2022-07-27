@@ -119,7 +119,7 @@ linters-settings:
     # Check the list against standard lib.
     include-go-root: true
     packages-with-error-message:
-      - io/ioutil: "The package is deprecated, use `io` or `so` instead."
+      - io/ioutil: "The package is deprecated, use `io` or `os` instead."
 
   gosimple:
     # Select the Go version to target. The default is '1.13'.
