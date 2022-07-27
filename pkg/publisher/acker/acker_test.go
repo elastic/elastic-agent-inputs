@@ -7,8 +7,9 @@ package acker
 import (
 	"testing"
 
-	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	"github.com/stretchr/testify/require"
+
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 )
 
 type fakeACKer struct {
@@ -101,6 +102,7 @@ func TestTracking(t *testing.T) {
 	})
 }
 
+//nolint:dupl // tests are similar, not duplicated
 func TestEventPrivateReporter(t *testing.T) {
 	t.Run("dropped event is acked immediately if empty", func(t *testing.T) {
 		var acked int

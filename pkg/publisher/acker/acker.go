@@ -7,8 +7,9 @@ package acker
 import (
 	"sync"
 
-	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	"go.uber.org/atomic"
+
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 )
 
 // Nil creates an ACKer that does nothing.

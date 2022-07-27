@@ -10,6 +10,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- Update Go to 1.18.4
+
 ### Deprecated
 
 ### Removed

@@ -4,17 +4,17 @@
 # options for analysis running
 run:
   # timeout for analysis, e.g. 30s, 5m, default is 1m
-  timeout: 1m
+  timeout: 2m
 
 issues:
   # Maximum count of issues with the same text.
   # Set to 0 to disable.
   # Default: 3
-  max-same-issues: 0
+  max-same-issues: 3
   # Maximum issues count per one linter.
   # Set to 0 to disable.
   # Default: 50
-  max-issues-per-linter: 0
+  max-issues-per-linter: 50
 
 output:
   sort-results: true
@@ -65,6 +65,7 @@ linters:
     - wastedassign # wastedassign finds wasted assignment statements.
     - godox # tool for detection of FIXME, TODO and other comment keywords
     - gomodguard # check for blocked dependencies
+    - depguard
 
 # all available settings of specific linters
 linters-settings:
@@ -102,9 +103,30 @@ linters-settings:
     # Allow local `replace` directives. Default is false.
     replace-local: false
 
+  goimports:
+    local-prefixes: github.com/elastic
+
+  gomodguard:
+    blocked:
+      # List of blocked modules.
+      modules:
+        # Blocked module.
+        - github.com/pkg/errors:
+            # Recommended modules that should be used instead. (Optional)
+            recommendations:
+              - errors
+              - fmt
+            reason: "This package is deprecated, use `fmt.Errorf` with `%w` instead"
+  depguard:
+    list-type:: denylist
+    # Check the list against standard lib.
+    include-go-root: true
+    packages-with-error-message:
+      - io/ioutil: "The package is deprecated, use `io` or `so` instead."
+
   gosimple:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.17.12"
+    go: "1.18.4"
 
   misspell:
     # Correct spellings using locale preferences for US or UK.
@@ -129,7 +151,7 @@ linters-settings:
     # Enable to ensure that nolint directives are all used. Default is true.
     allow-unused: false
     # Disable to ensure that nolint directives don't have a leading space. Default is true.
-    allow-leading-space: true
+    allow-leading-space: false
     # Exclude following linters from requiring an explanation.  Default is [].
     allow-no-explanation: []
     # Enable to require an explanation of nonzero length after each nolint directive. Default is false.
@@ -137,30 +159,15 @@ linters-settings:
     # Enable to require nolint directives to mention the specific linter being suppressed. Default is false.
     require-specific: true
 
-  gomodguard:
-    blocked:
-      # List of blocked modules.
-      modules:
-        # Blocked module.
-        - github.com/pkg/errors:
-            # Recommended modules that should be used instead. (Optional)
-            recommendations:
-              - errors
-              - fmt
-            reason: "This package is deprecated"
-        - github.com/elastic/beats/v7:
-            reason: "There must be no Beats dependency"
-
   staticcheck:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.17.12"
+    go: "1.18.4"
     # https://staticcheck.io/docs/options#checks
     checks: ["all"]
 
   stylecheck:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.17.12"
-    # https://staticcheck.io/docs/options#checks
+    go: "1.18.4"
     checks: ["all"]
 
   unparam:
@@ -172,4 +179,4 @@ linters-settings:
 
   unused:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.17.12"
+    go: "1.18.4"

@@ -9,13 +9,14 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/atomic"
+
 	"github.com/elastic/elastic-agent-inputs/pkg/statestore"
 	"github.com/elastic/elastic-agent-inputs/pkg/statestore/cleanup"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/elastic-agent-libs/transform/typeconv"
 	"github.com/elastic/go-concert"
 	"github.com/elastic/go-concert/unison"
-	"go.uber.org/atomic"
 )
 
 // store encapsulates the persistent store and the in memory state store, that
