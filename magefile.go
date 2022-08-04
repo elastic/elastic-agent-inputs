@@ -9,15 +9,26 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/magefile/mage/mg"
+	"github.com/magefile/mage/sh"
 
 	// mage:import
 	"github.com/elastic/elastic-agent-libs/dev-tools/mage"
 
 	devtools "github.com/elastic/elastic-agent-libs/dev-tools/mage"
 	"github.com/elastic/elastic-agent-libs/dev-tools/mage/gotool"
+)
+
+const (
+	// GoImportsImportPath controls the import path used to install goimports.
+	GoImportsImportPath = "golang.org/x/tools/cmd/goimports"
+
+	// GoImportsLocalPrefix is a string prefix matching imports that should be
+	// grouped after third-party packages.
+	GoImportsLocalPrefix = "github.com/elastic"
 )
 
 // Aliases are shortcuts to long target names.
@@ -73,4 +84,59 @@ func Notice() error {
 		filepath.Join("dev-tools", "templates", "notice", "rules.json"),
 		filepath.Join("dev-tools", "templates", "notice", "NOTICE.txt.tmpl"),
 	)
+}
+
+// GoImports executes goimports against all .go files in and below the CWD.
+func GoImports() error {
+	goFiles, err := FindFilesRecursive(func(path string, _ os.FileInfo) bool {
+		return filepath.Ext(path) == ".go"
+	})
+	if err != nil {
+		return err
+	}
+	if len(goFiles) == 0 {
+		return nil
+	}
+
+	fmt.Println(">> fmt - goimports: Formatting Go code")
+	if err := gotool.Install(
+		gotool.Install.Package(filepath.Join(GoImportsImportPath)),
+	); err != nil {
+		return err
+	}
+
+	args := append(
+		[]string{"-local", GoImportsLocalPrefix, "-l", "-w"},
+		goFiles...,
+	)
+
+	return sh.RunV("goimports", args...)
+}
+
+// FindFilesRecursive recursively traverses from the CWD and invokes the given
+// match function on each regular file to determine if the given path should be
+// returned as a match. It ignores files in .git directories.
+func FindFilesRecursive(match func(path string, info os.FileInfo) bool) ([]string, error) {
+	var matches []string
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Don't look for files in git directories
+		if info.Mode().IsDir() && filepath.Base(path) == ".git" {
+			return filepath.SkipDir
+		}
+
+		if !info.Mode().IsRegular() {
+			// continue
+			return nil
+		}
+
+		if match(filepath.ToSlash(path), info) {
+			matches = append(matches, path)
+		}
+		return nil
+	})
+	return matches, err
 }
