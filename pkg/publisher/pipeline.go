@@ -33,6 +33,10 @@ type ClientConfig struct {
 
 	Processing ProcessingConfig
 
+	// CloseRef is a subset of context.Context that allows for cancelation.
+	// TODO (Tiago): Should we replace it with:
+	// Done signals the client to close the connection
+	// Done func() <-chan struct{} ?
 	CloseRef CloseRef
 
 	// WaitClose sets the maximum duration to wait on ACK, if client still has events
@@ -54,15 +58,15 @@ type ClientConfig struct {
 //
 // Due to event publishing and ACKing are asynchronous operations, the
 // operations on ACKer are normally executed in different go routines. ACKers
-// are required to be multi-threading safe.
+// are required to be goroutine safe.
 type ACKer interface {
 	// AddEvent informs the ACKer that a new event has been send to the client.
 	// AddEvent is called after the processors have handled the event. If the
-	// event has been dropped by the processor `published` will be set to true.
+	// event has been dropped by the processor `published` will be set to false.
 	// This allows the ACKer to do some bookeeping for dropped events.
 	AddEvent(event Event, published bool)
 
-	// ACK Events from the output and pipeline queue are forwarded to ACKEvents.
+	// ACKEvents from the output and pipeline queue are forwarded to ACKEvents.
 	// The number of reported events only matches the known number of events downstream.
 	// ACKers might need to keep track of dropped events by themselves.
 	ACKEvents(n int)
@@ -73,13 +77,6 @@ type ACKer interface {
 	// to suppress any ACK event propagation if required.
 	// Close might be called from another go-routine than AddEvent and ACKEvents.
 	Close()
-}
-
-// CloseRef allows users to close the client asynchronously.
-// A CloseReg implements a subset of function required for context.Context.
-type CloseRef interface {
-	Done() <-chan struct{}
-	Err() error
 }
 
 // ProcessingConfig provides additional event processing settings a client can
@@ -113,6 +110,13 @@ type ProcessingConfig struct {
 	Private interface{}
 }
 
+// CloseRef allows users to close the client asynchronously.
+// A CloseReg implements a subset of function required for context.Context.
+type CloseRef interface {
+	Done() <-chan struct{}
+	Err() error
+}
+
 // ClientEventer provides access to internal client events.
 type ClientEventer interface {
 	Closing() // Closing indicates the client is being shutdown next
@@ -133,6 +137,9 @@ type ProcessorList interface {
 // registered with the publisher pipeline.
 type Processor interface {
 	String() string // print full processor description
+
+	// Run runs the processor, on error event must be nil.
+	// If the event was dropped then event and err will be nil
 	Run(in *Event) (event *Event, err error)
 }
 

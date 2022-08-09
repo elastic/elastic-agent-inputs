@@ -19,7 +19,8 @@ import (
 	pubtest "github.com/elastic/elastic-agent-inputs/pkg/publisher/testing"
 	"github.com/elastic/elastic-agent-libs/atomic"
 	conf "github.com/elastic/elastic-agent-libs/config"
-	"github.com/elastic/elastic-agent-libs/mapstr"
+	"github.com/elastic/elastic-agent-shipper-client/pkg/helpers"
+	"github.com/elastic/elastic-agent-shipper-client/pkg/proto/messages"
 )
 
 type fakeStatelessInput struct {
@@ -38,7 +39,15 @@ func TestStateless_Run(t *testing.T) {
 			OnRun: func(ctx input.Context, p stateless.Publisher) error {
 				defer close(ch)
 				for i := 0; i < numEvents; i++ {
-					p.Publish(publisher.Event{Fields: map[string]interface{}{"id": i}})
+					p.Publish(publisher.Event{
+						ShipperMessage: &messages.Event{
+							Fields: &messages.Struct{
+								Data: map[string]*messages.Value{
+									"id": helpers.NewNumberValue(float64(i)),
+								},
+							},
+						},
+					})
 				}
 				return nil
 			},
@@ -85,8 +94,12 @@ func TestStateless_Run(t *testing.T) {
 				for ctx.Cancelation.Err() == nil {
 					started.Store(true)
 					p.Publish(publisher.Event{
-						Fields: mapstr.M{
-							"hello": "world",
+						ShipperMessage: &messages.Event{
+							Fields: &messages.Struct{
+								Data: map[string]*messages.Value{
+									"hello": helpers.NewStringValue("world"),
+								},
+							},
 						},
 					})
 				}

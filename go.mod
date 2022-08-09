@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/brianvoe/gofakeit/v6 v6.18.0
 	github.com/elastic/elastic-agent-libs v0.2.12-0.20220811074002-9b996f609582
+	github.com/elastic/elastic-agent-shipper-client v0.4.0
 	github.com/elastic/go-concert v0.2.0
 	github.com/elastic/go-licenser v0.4.0
 	github.com/elastic/go-structform v0.0.9
@@ -19,6 +20,7 @@ require (
 	go.uber.org/atomic v1.9.0
 	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
 	golang.org/x/tools v0.1.9
+
 )
 
 require (
@@ -44,6 +46,8 @@ require (
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
+	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

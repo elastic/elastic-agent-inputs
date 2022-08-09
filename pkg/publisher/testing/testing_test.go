@@ -10,18 +10,24 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
-	"github.com/elastic/elastic-agent-libs/mapstr"
+	"github.com/elastic/elastic-agent-shipper-client/pkg/helpers"
+	"github.com/elastic/elastic-agent-shipper-client/pkg/proto/messages"
 )
 
 var cnt = 0
 
 func testEvent() publisher.Event {
 	event := publisher.Event{
-		Fields: mapstr.M{
-			"message": "test",
-			"idx":     cnt,
+		ShipperMessage: &messages.Event{
+			Fields: &messages.Struct{
+				Data: map[string]*messages.Value{
+					"message": helpers.NewStringValue("test"),
+					"idx":     helpers.NewNumberValue(float64(cnt)),
+				},
+			},
 		},
 	}
+
 	cnt++
 	return event
 }

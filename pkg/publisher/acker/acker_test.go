@@ -19,7 +19,7 @@ type fakeACKer struct {
 }
 
 func TestNil(t *testing.T) {
-	acker := Nil()
+	acker := NoOp()
 	require.NotNil(t, acker)
 
 	// check acker can be used without panic:
