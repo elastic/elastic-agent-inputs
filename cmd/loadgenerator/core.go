@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
 
@@ -17,6 +18,8 @@ type loadGenerator struct {
 	cfg    Config
 	now    func() time.Time
 	logger *logp.Logger
+
+	output publisher.Client
 }
 
 func (l loadGenerator) Run(ctx context.Context) error {

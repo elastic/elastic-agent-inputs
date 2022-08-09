@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/elastic/elastic-agent-inputs/pkg/outputs/console"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
 
@@ -83,17 +84,33 @@ func command(logger *logp.Logger) func(cmd *cobra.Command, args []string) {
 		logger.Debugf("Config: %#v", cfg)
 		logger.Info("Starting")
 
-		if err := run(cfg, logger); err != nil {
+		if err := run(context.TODO(), cfg, logger); err != nil {
 			logger.Fatal(err)
 		}
 	}
 }
 
-func run(cfg Config, logger *logp.Logger) error {
+// run initialises the publishing pipeline, publishing client,
+// loadGenerator and starts running the loadGenerator
+func run(ctx context.Context, cfg Config, logger *logp.Logger) error {
+	// Create a pipeline, it receives the config necessary to instantiate
+	// the output client.
+	pipeline := console.NewPipeline(os.Stdout)
+
+	// Initialises/connects to the output client
+	client, err := pipeline.Connect()
+	if err != nil {
+		return fmt.Errorf("could not connect to pipeline: %w", err)
+	}
+
+	// initialises the loadGenerator
 	lg := loadGenerator{
 		cfg:    cfg,
 		now:    time.Now,
 		logger: logger,
+		output: client,
 	}
-	return lg.Run(context.TODO())
+
+	// runs the loadGenerator until shutdown
+	return lg.Run(ctx)
 }
