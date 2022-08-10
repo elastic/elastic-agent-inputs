@@ -95,7 +95,7 @@ func command(logger *logp.Logger) func(cmd *cobra.Command, args []string) {
 func run(ctx context.Context, cfg Config, logger *logp.Logger) error {
 	// Create a pipeline, it receives the config necessary to instantiate
 	// the output client.
-	pipeline := console.NewPipeline(os.Stdout)
+	pipeline := console.NewPipeline(ctx, logger.Named("pipeline"), os.Stdout)
 
 	// Initialises/connects to the output client
 	client, err := pipeline.Connect()

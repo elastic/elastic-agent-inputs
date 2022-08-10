@@ -7,11 +7,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	"github.com/elastic/elastic-agent-libs/logp"
+	"github.com/elastic/elastic-agent-shipper-client/pkg/helpers"
+	"github.com/elastic/elastic-agent-shipper-client/pkg/proto/messages"
 )
 
 type loadGenerator struct {
@@ -72,6 +73,16 @@ func (l loadGenerator) next(t time.Time) string {
 // send sends the event to the publishing pipeline
 // TODO (Tiago): implement it
 func (l loadGenerator) send(event string) error {
-	_, err := os.Stdout.Write([]byte(event + "\n"))
-	return err
+	e := publisher.Event{
+		ShipperMessage: &messages.Event{
+			Fields: &messages.Struct{
+				Data: map[string]*messages.Value{
+					"message": helpers.NewStringValue(event),
+				},
+			},
+		},
+	}
+
+	l.output.Publish(e)
+	return nil
 }
