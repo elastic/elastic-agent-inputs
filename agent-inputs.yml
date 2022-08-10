@@ -1,10 +1,10 @@
 loadgenerator:
   # Delay between messages are sent, default is 1 second
-  delay: "0.1s"
+  delay: "1.0s"
   
   # Time delta between messages (affects @timestamp field) but not
   # the throughput. Default is 1s
-  timedelta: "0.s"
+  timedelta: "1.0s"
   
   # Execute indefinitely, if set, 'eventscount' is ignored.
   # Default is true

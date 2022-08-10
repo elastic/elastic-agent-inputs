@@ -61,6 +61,7 @@ func (p Pipeline) Cancel() error {
 		}
 	}
 
+	p.logger.Debug("shutdown done")
 	return nil
 }
 
@@ -74,6 +75,7 @@ func (p Pipeline) newClient(cfg publisher.ClientConfig, logger *logp.Logger) (pu
 
 	go func() {
 		<-c.cancelCtx.Done()
+		c.logger.Debug("starting shutdown")
 		if err := c.Close(); err != nil {
 			c.logger.Errorf("error shutingdown client: %s", err)
 		}
@@ -127,6 +129,7 @@ func (c Client) PublishAll(events []publisher.Event) {
 
 // Close no op function, stdout does not need closing
 func (c Client) Close() error {
+	c.logger.Debug("shutdown done")
 	return nil
 }
 

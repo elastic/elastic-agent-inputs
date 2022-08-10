@@ -7,16 +7,20 @@ package loadgenerator
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	"github.com/elastic/elastic-agent-libs/logp"
+	"github.com/elastic/elastic-agent-shipper-client/pkg/helpers"
+	"github.com/elastic/elastic-agent-shipper-client/pkg/proto/messages"
 )
 
 type loadGenerator struct {
 	cfg    Config
 	now    func() time.Time
 	logger *logp.Logger
+
+	output publisher.Client
 }
 
 func (l loadGenerator) Run(ctx context.Context) error {
@@ -24,13 +28,19 @@ func (l loadGenerator) Run(ctx context.Context) error {
 	delta := l.cfg.TimeDelta
 	delay := l.cfg.Delay
 
+	doneChan := make(chan struct{})
+	go func() {
+		<-ctx.Done()
+		l.logger.Debug("Shutdown signal received, closing loadGenerator")
+		close(doneChan)
+	}()
+
 	// Loop forever
 	if l.cfg.Loop {
-		l.logger.Debug("loop enabled")
 		for {
 			select {
-			case <-ctx.Done():
-				l.logger.Info("Shutdown signal received, closing loadGenerator")
+			case <-doneChan:
+				l.logger.Debug("loadgenerator closed")
 				return nil
 			default:
 				if err := l.send(l.next(t)); err != nil {
@@ -47,7 +57,6 @@ func (l loadGenerator) Run(ctx context.Context) error {
 	}
 
 	// Generate a set number of events
-	l.logger.Debugf("%d events will be generated", l.cfg.EventsCount)
 	for i := uint64(0); i < l.cfg.EventsCount; i++ {
 		if err := l.send(l.next(t)); err != nil {
 			return fmt.Errorf("error sending event: %w", err)
@@ -69,7 +78,18 @@ func (l loadGenerator) next(t time.Time) string {
 }
 
 // send sends the event to the publishing pipeline
+// TODO (Tiago): implement it
 func (l loadGenerator) send(event string) error {
-	_, err := os.Stdout.Write([]byte(event + "\n"))
-	return err
+	e := publisher.Event{
+		ShipperMessage: &messages.Event{
+			Fields: &messages.Struct{
+				Data: map[string]*messages.Value{
+					"message": helpers.NewStringValue(event),
+				},
+			},
+		},
+	}
+
+	l.output.Publish(e)
+	return nil
 }

@@ -5,9 +5,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 
 	"github.com/spf13/cobra"
 
@@ -26,6 +29,9 @@ func (l logWriter) Write(p []byte) (n int, err error) {
 }
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	// Initialise the logger as early as possible
 	logConfig := logp.DefaultConfig(logp.DefaultEnvironment)
 	logConfig.Beat = "agent-inputs"
@@ -52,13 +58,20 @@ func main() {
 		logger.Fatalf("could not read config file: %s", err)
 	}
 
+	// Configure the logp package
 	if err := logp.Configure(cfg.Log); err != nil {
 		logger.Fatalf("applying logger configuration: %v", err)
 	}
 
+	// Get a new logger with the configuration we've just applied
+	logger = logp.L()
+
+	// Set the output of the standard logger to our new logger.
+	log.SetOutput(logWriter{logger})
+
 	rootCmd.AddCommand(loadgenerator.Command(logger, cfg.LoadGenerator))
 
-	if err := rootCmd.Execute(); err != nil {
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		logger.Fatal(err)
 	}
 }
