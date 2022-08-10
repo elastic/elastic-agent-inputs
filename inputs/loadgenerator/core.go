@@ -2,7 +2,7 @@
 // or more contributor license agreements. Licensed under the Elastic License;
 // you may not use this file except in compliance with the Elastic License.
 
-package main
+package loadgenerator
 
 import (
 	"context"
@@ -26,6 +26,7 @@ func (l loadGenerator) Run(ctx context.Context) error {
 
 	// Loop forever
 	if l.cfg.Loop {
+		l.logger.Debug("loop enabled")
 		for {
 			select {
 			case <-ctx.Done():
@@ -46,6 +47,7 @@ func (l loadGenerator) Run(ctx context.Context) error {
 	}
 
 	// Generate a set number of events
+	l.logger.Debugf("%d events will be generated", l.cfg.EventsCount)
 	for i := uint64(0); i < l.cfg.EventsCount; i++ {
 		if err := l.send(l.next(t)); err != nil {
 			return fmt.Errorf("error sending event: %w", err)
@@ -67,7 +69,6 @@ func (l loadGenerator) next(t time.Time) string {
 }
 
 // send sends the event to the publishing pipeline
-// TODO (Tiago): implement it
 func (l loadGenerator) send(event string) error {
 	_, err := os.Stdout.Write([]byte(event + "\n"))
 	return err

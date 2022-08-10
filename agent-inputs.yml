@@ -1,0 +1,17 @@
+loadgenerator:
+  # Delay between messages are sent, default is 1 second
+  delay: "0.1s"
+  
+  # Time delta between messages (affects @timestamp field) but not
+  # the throughput. Default is 1s
+  timedelta: "0.s"
+  
+  # Execute indefinitely, if set, 'eventscount' is ignored.
+  # Default is true
+  loop: true
+
+logging:
+  level: debug
+  selectors: ["*"]
+  to_stderr: true
+  to_files: false

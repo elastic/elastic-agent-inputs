@@ -1,16 +1,18 @@
-# Delay between messages are sent, default is 1 second
-delay: "1s"
+# ================================== Load Generator ===================================
+loadgenerator:
+  # Delay between messages are sent, default is 1 second
+  delay: "1s"
 
-# Time delta between messages (affects @timestamp field) but not
-# the throughput. Default is 1s
-timedelta: "1ss"
+  # Time delta between messages (affects @timestamp field) but not
+  # the throughput. Default is 1s
+  timedelta: "1ss"
 
-# Execute indefinitely, if set, 'eventscount' is ignored.
-# Default is true
-loop: true
+  # Execute indefinitely, if set, 'eventscount' is ignored.
+  # Default is true
+  loop: true
 
-# Number of events to generate
-eventscount: 100
+  # Number of events to generate
+  eventscount: 100
 
 # ================================== Logging ===================================
 
