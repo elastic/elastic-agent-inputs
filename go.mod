@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/brianvoe/gofakeit/v6 v6.18.0
-	github.com/elastic/elastic-agent-libs v0.2.7
+	github.com/elastic/elastic-agent-libs v0.2.12-0.20220811074002-9b996f609582
 	github.com/elastic/go-concert v0.2.0
 	github.com/elastic/go-licenser v0.4.0
 	github.com/elastic/go-structform v0.0.9
@@ -39,7 +39,6 @@ require (
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/urso/diag v0.0.0-20200210123136-21b3cc8eb797 // indirect
 	go.elastic.co/ecszap v1.0.1 // indirect
-	go.uber.org/goleak v1.1.12 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/mod v0.5.1 // indirect
