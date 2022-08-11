@@ -2,6 +2,7 @@
 // or more contributor license agreements. Licensed under the Elastic License;
 // you may not use this file except in compliance with the Elastic License.
 
+//go:build mage
 // +build mage
 
 package main
@@ -36,6 +37,7 @@ func Check() error {
 
 // Fmt formats code and adds license headers.
 func Fmt() {
+	mg.Deps(devtools.GoImports.Run)
 	mg.Deps(AddLicenseHeaders)
 }
 

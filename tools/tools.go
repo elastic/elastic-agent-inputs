@@ -2,11 +2,14 @@
 // or more contributor license agreements. Licensed under the Elastic License;
 // you may not use this file except in compliance with the Elastic License.
 
+//go:build tools
 // +build tools
 
 package tools
 
 import (
-	_ "github.com/elastic/go-licenser"
 	_ "go.elastic.co/go-licence-detector"
+	_ "golang.org/x/tools/cmd/goimports"
+
+	_ "github.com/elastic/go-licenser"
 )
