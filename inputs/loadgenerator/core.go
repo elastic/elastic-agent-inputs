@@ -20,7 +20,7 @@ type loadGenerator struct {
 	now    func() time.Time
 	logger *logp.Logger
 
-	output publisher.Client
+	output publisher.PipelineV2
 }
 
 func (l loadGenerator) Run(ctx context.Context) error {

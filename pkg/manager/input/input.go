@@ -9,8 +9,8 @@ import (
 
 	"github.com/gofrs/uuid"
 
+	"github.com/elastic/elastic-agent-client/v7/pkg/proto"
 	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
-	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/go-concert/unison"
 )
@@ -32,7 +32,7 @@ type InputManager interface {
 	// an error if the configuation is invalid.
 	// The input must establish any connection for data collection yet. The Beat
 	// will use the Test/Run methods of the input.
-	Create(*conf.C) (Input, error)
+	Create(*proto.UnitExpectedConfig) (Input, error)
 }
 
 // Mode tells the InputManager in which mode it is initialized.
@@ -62,7 +62,7 @@ type Input interface {
 
 	// Run starts the data collection. Run must return an error only if the
 	// error is fatal making it impossible for the input to recover.
-	Run(Context, publisher.PipelineConnector) error
+	Run(Context, publisher.Client) error
 }
 
 // Info stores a input instance meta data.

@@ -9,133 +9,83 @@ import (
 	"fmt"
 	"io"
 
-	"google.golang.org/protobuf/encoding/protojson"
-
 	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	"github.com/elastic/elastic-agent-inputs/pkg/publisher/acker"
 	"github.com/elastic/elastic-agent-libs/logp"
-	"github.com/elastic/go-concert/ctxtool"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// Pipeline implements pkg/publisher.Pipeline
-type Pipeline struct {
-	cancelCtx ctxtool.CancelContext
-	logger    *logp.Logger
-	out       io.Writer
-	client    publisher.Client
+type Config struct {
+	Enabled bool `yaml:"enabled"`
+	Pretty  bool `yaml:"pretty"`
 }
 
-// Client implements pkg/publisher.Client
-type Client struct {
+// client implements pkg/publisher.client
+type client struct {
 	out       io.Writer
-	cancelCtx ctxtool.CancelContext
+	cancelCtx context.Context
 	logger    *logp.Logger
 	Acker     publisher.ACKer
+	marshaler protojson.MarshalOptions
 }
 
-func NewPipeline(ctx context.Context, logger *logp.Logger, out io.Writer) Pipeline {
-	cancelCtx := ctxtool.WithCancelContext(ctx)
-	p := Pipeline{
-		logger:    logger,
+// New returns a new console client that implements publisher.PipelineV2
+func New(ctx context.Context, out io.Writer, logger *logp.Logger, ackerInstance publisher.ACKer, cfg Config) publisher.PipelineV2 {
+	marshaller := protojson.MarshalOptions{
+		AllowPartial:  true,
+		UseProtoNames: true,
+		Multiline:     cfg.Pretty,
+	}
+
+	if !cfg.Enabled {
+		out = io.Discard
+	}
+
+	if ackerInstance == nil {
+		ackerInstance = acker.NoOp()
+	}
+
+	return client{
 		out:       out,
-		cancelCtx: cancelCtx,
-	}
-
-	go func() {
-		<-ctx.Done()
-		logger.Debug("got done signal, shutting down pipeline")
-		if err := p.Cancel(); err != nil {
-			p.logger.Errorf("cold not shutdown pipeline: %s", err)
-		}
-	}()
-
-	return p
-}
-
-func (p Pipeline) Cancel() error {
-	defer p.cancelCtx.Cancel()
-	if p.client != nil {
-		if err := p.client.Close(); err != nil {
-			p.logger.Debugf("error closing client: %s", err)
-			return fmt.Errorf("could not close client: %w", err)
-		}
-	}
-
-	p.logger.Debug("shutdown done")
-	return nil
-}
-
-func (p Pipeline) newClient(cfg publisher.ClientConfig, logger *logp.Logger) (publisher.Client, error) {
-	c := Client{
 		logger:    logger,
-		Acker:     cfg.ACKHandler,
-		out:       p.out,
-		cancelCtx: ctxtool.WithCancelContext(p.cancelCtx.Context),
+		Acker:     ackerInstance,
+		cancelCtx: ctx,
+		marshaler: marshaller,
 	}
-
-	go func() {
-		<-c.cancelCtx.Done()
-		c.logger.Debug("starting shutdown")
-		if err := c.Close(); err != nil {
-			c.logger.Errorf("error shutingdown client: %s", err)
-		}
-	}()
-
-	if c.Acker == nil {
-		c.Acker = acker.NoOp()
-	}
-
-	return c, nil
-}
-
-// ConnectWith returns a Client using the given configuration
-func (p Pipeline) ConnectWith(cfg publisher.ClientConfig) (publisher.Client, error) {
-	return p.newClient(cfg, p.logger.Named("client"))
-
-}
-
-// Connect returns a client using the default configuration
-func (p Pipeline) Connect() (publisher.Client, error) {
-	return p.ConnectWith(publisher.ClientConfig{})
 }
 
 // Publish publishes a single event to stdout
-func (c Client) Publish(event publisher.Event) {
-	if c.Acker != nil {
-		c.Acker.AddEvent(event, true)
-	}
+func (c client) Publish(event publisher.Event) {
+	c.Acker.AddEvent(event, true)
 
 	if err := c.publish(event); err != nil {
 		c.logger.Errorf("could not publish event: %s", err)
 		c.logger.Debugf("event not published: '%s'", event.ShipperMessage.String())
 	}
 
-	if c.Acker != nil {
-		c.Acker.ACKEvents(1)
-	}
+	c.Acker.ACKEvents(1)
+	c.logger.Debugf("event published")
 }
 
 // PublishAll calls c.publish for every event then
 // ack them all at once
-func (c Client) PublishAll(events []publisher.Event) {
+func (c client) PublishAll(events []publisher.Event) {
 	for _, event := range events {
 		c.publish(event)
 	}
 
-	if c.Acker != nil {
-		c.Acker.ACKEvents(len(events))
-	}
+	c.Acker.ACKEvents(len(events))
 }
 
 // Close no op function, stdout does not need closing
-func (c Client) Close() error {
+func (c client) Close() error {
 	c.logger.Debug("shutdown done")
 	return nil
 }
 
 // publish publishes an event
-func (c Client) publish(event publisher.Event) error {
-	data, err := protojson.Marshal(event.ShipperMessage)
+func (c client) publish(event publisher.Event) error {
+	data, err := c.marshaler.Marshal(event.ShipperMessage)
 	if err != nil {
 		return fmt.Errorf("could not marshal event as JSON: %w", err)
 	}

@@ -10,6 +10,21 @@ loadgenerator:
   # Default is true
   loop: true
 
+outputs:
+  shipper:
+    enabled: true
+    server: "localhost:50051"
+    ssl:
+      enabled: false
+    timeout: 5s
+    max_retries: 3
+    bulk_max_size: 50
+    backoff:
+      init: 1s
+      max: 60s
+  console:
+    enabled: false
+
 logging:
   level: debug
   selectors: ["*"]

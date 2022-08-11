@@ -10,14 +10,49 @@ import (
 	"github.com/elastic/elastic-agent-libs/mapstr"
 )
 
+// PublishMode enum sets some requirements on the client connection to the beats
+// publisher pipeline
+type PublishMode uint8
+
+const (
+	// DefaultGuarantees are up to the pipeline configuration itself.
+	DefaultGuarantees PublishMode = iota
+
+	// OutputChooses mode fully depends on the output and its configuration.
+	// Events might be dropped based on the users output configuration.
+	// In this mode no events are dropped within the pipeline. Events are only removed
+	// after the output has ACKed the events to the pipeline, even if the output
+	// did drop the events.
+	OutputChooses
+
+	// GuaranteedSend ensures events are retried until acknowledged by the output.
+	// Normally guaranteed sending should be used with some client ACK-handling
+	// to update state keeping track of the sending status.
+	GuaranteedSend
+
+	// DropIfFull drops an event to be send if the pipeline is currently full.
+	// This ensures a beats internals can continue processing if the pipeline has
+	// filled up. Useful if an event stream must be processed to keep internal
+	// state up-to-date.
+	DropIfFull
+)
+
 // Pipeline provides access to libbeat event publishing by creating a Client
 // instance.
 type Pipeline interface {
+	// ConnectWith create a new Client for publishing events to the pipeline.
+	// The client behavior on close and ACK handling can be configured by setting
+	// the appropriate fields in the passed ClientConfig.
+	// If not set otherwise the defaut publish mode is OutputChooses.
 	ConnectWith(ClientConfig) (Client, error)
+
+	// Connect creates a new client with default settings.
 	Connect() (Client, error)
 }
 
 type PipelineConnector = Pipeline
+
+type PipelineV2 Client
 
 // Client holds a connection to the beats publisher pipeline
 type Client interface {
@@ -142,30 +177,3 @@ type Processor interface {
 	// If the event was dropped then event and err will be nil
 	Run(in *Event) (event *Event, err error)
 }
-
-// PublishMode enum sets some requirements on the client connection to the beats
-// publisher pipeline
-type PublishMode uint8
-
-const (
-	// DefaultGuarantees are up to the pipeline configuration itself.
-	DefaultGuarantees PublishMode = iota
-
-	// OutputChooses mode fully depends on the output and its configuration.
-	// Events might be dropped based on the users output configuration.
-	// In this mode no events are dropped within the pipeline. Events are only removed
-	// after the output has ACKed the events to the pipeline, even if the output
-	// did drop the events.
-	OutputChooses
-
-	// GuaranteedSend ensures events are retried until acknowledged by the output.
-	// Normally guaranteed sending should be used with some client ACK-handling
-	// to update state keeping track of the sending status.
-	GuaranteedSend
-
-	// DropIfFull drops an event to be send if the pipeline is currently full.
-	// This ensures a beats internals can continue processing if the pipeline has
-	// filled up. Useful if an event stream must be processed to keep internal
-	// state up-to-date.
-	DropIfFull
-)
