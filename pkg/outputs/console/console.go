@@ -9,10 +9,11 @@ import (
 	"fmt"
 	"io"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	"github.com/elastic/elastic-agent-inputs/pkg/publisher/acker"
 	"github.com/elastic/elastic-agent-libs/logp"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type Config struct {
