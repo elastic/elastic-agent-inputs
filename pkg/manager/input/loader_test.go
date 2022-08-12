@@ -183,9 +183,11 @@ func (b loaderConfig) WithTypeField(name string) loaderConfig   { b.TypeField = 
 func (b loaderConfig) WithDefaultType(name string) loaderConfig { b.DefaultType = name; return b }
 
 func failSetup(t *testing.T, _ Input, err error) {
+	t.Helper()
 	expectError(t, err)
 }
 
 func okSetup(t *testing.T, _ Input, err error) {
+	t.Helper()
 	expectNoError(t, err)
 }

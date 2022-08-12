@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/brianvoe/gofakeit/v6 v6.18.0
-	github.com/elastic/elastic-agent-client/v7 v7.0.0-20220804181728-b0328d2fe484
 	github.com/elastic/elastic-agent-libs v0.2.12-0.20220811074002-9b996f609582
 	github.com/elastic/elastic-agent-shipper-client v0.4.0
 	github.com/elastic/go-concert v0.2.0
