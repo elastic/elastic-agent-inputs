@@ -31,12 +31,11 @@ func run(cfg Config) func(cmd *cobra.Command, args []string) {
 		logger.Info("Starting loadgenerator")
 
 		lg := loadGenerator{
-			cfg:    cfg,
 			now:    time.Now,
 			logger: logger,
 		}
 
-		if err := lg.Run(context.TODO()); err != nil {
+		if err := lg.Start(context.TODO()); err != nil {
 			logger.Fatal(err)
 		}
 	}
