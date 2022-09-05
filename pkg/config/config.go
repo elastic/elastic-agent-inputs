@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 
 	"github.com/elastic/elastic-agent-inputs/inputs/loadgenerator"
+	"github.com/elastic/elastic-agent-inputs/pkg/outputs/console"
+	"github.com/elastic/elastic-agent-inputs/pkg/outputs/shipper"
 	"github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
@@ -35,6 +37,12 @@ func init() {
 type Config struct {
 	Log           logp.Config          `yaml:"logging" json:"logging"`
 	LoadGenerator loadgenerator.Config `yaml:"loadgenerator" json:"loadgenerator"`
+	Outputs       Outputs              `yaml:"outputs"`
+}
+
+type Outputs struct {
+	Shipper shipper.Config `yaml:"shipper"`
+	Console console.Config `yaml:"console"`
 }
 
 // ReadConfig returns the populated config from the specified path
@@ -84,5 +92,8 @@ func defaultConfig() Config {
 	return Config{
 		Log:           logCfg,
 		LoadGenerator: loadgenerator.DefaultConfig(),
+		Outputs: Outputs{
+			Shipper: shipper.DefaultConfig(),
+		},
 	}
 }

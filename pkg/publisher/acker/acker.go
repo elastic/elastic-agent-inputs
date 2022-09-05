@@ -12,16 +12,16 @@ import (
 	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 )
 
-// Nil creates an ACKer that does nothing.
-func Nil() publisher.ACKer {
-	return nilACKer{}
+// NoOp creates an ACKer that does nothing.
+func NoOp() publisher.ACKer {
+	return noOp{}
 }
 
-type nilACKer struct{}
+type noOp struct{}
 
-func (nilACKer) AddEvent(event publisher.Event, published bool) {}
-func (nilACKer) ACKEvents(n int)                                {}
-func (nilACKer) Close()                                         {}
+func (noOp) AddEvent(event publisher.Event, published bool) {}
+func (noOp) ACKEvents(n int)                                {}
+func (noOp) Close()                                         {}
 
 // RawCounting reports the number of ACKed events as has been reported by the outputs or queue.
 // The ACKer does not keep track of dropped events. Events after the client has

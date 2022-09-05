@@ -61,12 +61,14 @@ func (f *fakeInput) Run(ctx Context, pipeline publisher.PipelineConnector) error
 }
 
 func expectError(t *testing.T, err error) {
+	t.Helper()
 	if err == nil {
 		t.Errorf("expected error")
 	}
 }
 
 func expectNoError(t *testing.T, err error) {
+	t.Helper()
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}

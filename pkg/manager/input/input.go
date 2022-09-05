@@ -10,7 +10,7 @@ import (
 	"github.com/gofrs/uuid"
 
 	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
-	conf "github.com/elastic/elastic-agent-libs/config"
+	"github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/go-concert/unison"
 )
@@ -32,7 +32,7 @@ type InputManager interface {
 	// an error if the configuation is invalid.
 	// The input must establish any connection for data collection yet. The Beat
 	// will use the Test/Run methods of the input.
-	Create(*conf.C) (Input, error)
+	Create(cfg *config.C) (Input, error)
 }
 
 // Mode tells the InputManager in which mode it is initialized.

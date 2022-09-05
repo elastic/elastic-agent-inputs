@@ -46,7 +46,7 @@ type Input interface {
 // done.
 type managedInput struct {
 	manager      *InputManager
-	userID       string
+	ID           string
 	sources      []Source
 	input        Input
 	cleanTimeout time.Duration
@@ -155,8 +155,8 @@ func (inp *managedInput) runSource(
 }
 
 func (inp *managedInput) createSourceID(s Source) string {
-	if inp.userID != "" {
-		return fmt.Sprintf("%v::%v::%v", inp.manager.Type, inp.userID, s.Name())
+	if inp.ID != "" {
+		return fmt.Sprintf("%v::%v::%v", inp.manager.Type, inp.ID, s.Name())
 	}
 	return fmt.Sprintf("%v::%v", inp.manager.Type, s.Name())
 }

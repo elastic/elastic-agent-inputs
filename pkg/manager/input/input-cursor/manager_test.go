@@ -23,7 +23,8 @@ import (
 	pubtest "github.com/elastic/elastic-agent-inputs/pkg/publisher/testing"
 	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
-	"github.com/elastic/elastic-agent-libs/mapstr"
+	"github.com/elastic/elastic-agent-shipper-client/pkg/helpers"
+	"github.com/elastic/elastic-agent-shipper-client/pkg/proto/messages"
 	"github.com/elastic/go-concert/unison"
 )
 
@@ -355,7 +356,16 @@ func TestManager_InputsRun(t *testing.T) {
 					}
 
 					for i := 0; i < config.Max; i++ {
-						event := publisher.Event{Fields: mapstr.M{"n": state.N}}
+						event := publisher.Event{
+							ShipperMessage: &messages.Event{
+								Fields: &messages.Struct{
+									Data: map[string]*messages.Value{
+										"n": helpers.NewNumberValue(float64(state.N)),
+									},
+								},
+							},
+						}
+
 						state.N++
 						mustPublish(pub, event, state)
 					}
@@ -369,11 +379,12 @@ func TestManager_InputsRun(t *testing.T) {
 		var ids []int
 		pipeline := pubtest.ConstClient(&pubtest.FakeClient{
 			PublishFunc: func(event publisher.Event) {
-				id, ok := event.Fields["n"].(int)
+				fields := event.ShipperMessage.Fields.GetData()
+				id, ok := fields["n"]
 				if !ok {
-					panic(fmt.Errorf("cannot convert id to int"))
+					t.Fatalf("cannot get key 'n' from: %#v", fields)
 				}
-				ids = append(ids, id)
+				ids = append(ids, int(id.GetNumberValue()))
 			},
 		})
 
@@ -407,14 +418,20 @@ func TestManager_InputsRun(t *testing.T) {
 		manager := constInput(t, sourceList("key"), &fakeTestInput{
 			OnRun: func(ctx input.Context, _ Source, _ Cursor, pub Publisher) error {
 				defer wgSend.Done()
-				fields := mapstr.M{"hello": "world"}
-				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state1")
-				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state2")
-				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state3")
-				mustPublish(pub, publisher.Event{Fields: fields}, nil)
-				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state4")
-				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state5")
-				mustPublish(pub, publisher.Event{Fields: fields}, "test-cursor-state6")
+				fields := &messages.Event{
+					Fields: &messages.Struct{
+						Data: map[string]*messages.Value{
+							"hello": helpers.NewStringValue("world"),
+						},
+					},
+				}
+				mustPublish(pub, publisher.Event{ShipperMessage: fields}, "test-cursor-state1")
+				mustPublish(pub, publisher.Event{ShipperMessage: fields}, "test-cursor-state2")
+				mustPublish(pub, publisher.Event{ShipperMessage: fields}, "test-cursor-state3")
+				mustPublish(pub, publisher.Event{ShipperMessage: fields}, nil)
+				mustPublish(pub, publisher.Event{ShipperMessage: fields}, "test-cursor-state4")
+				mustPublish(pub, publisher.Event{ShipperMessage: fields}, "test-cursor-state5")
+				mustPublish(pub, publisher.Event{ShipperMessage: fields}, "test-cursor-state6")
 				return nil
 			},
 		})

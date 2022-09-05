@@ -160,7 +160,7 @@ func (cim *InputManager) Create(config *conf.C) (input.Input, error) {
 
 	return &managedInput{
 		manager:      cim,
-		userID:       settings.ID,
+		ID:           settings.ID,
 		sources:      sources,
 		input:        inp,
 		cleanTimeout: settings.CleanTimeout,

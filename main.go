@@ -5,14 +5,23 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 
 	"github.com/spf13/cobra"
 
 	"github.com/elastic/elastic-agent-inputs/inputs/loadgenerator"
 	"github.com/elastic/elastic-agent-inputs/pkg/config"
+	"github.com/elastic/elastic-agent-inputs/pkg/outputs"
+	"github.com/elastic/elastic-agent-inputs/pkg/outputs/console"
+	"github.com/elastic/elastic-agent-inputs/pkg/outputs/shipper"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher/acker"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher/pipeline"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
 
@@ -26,6 +35,9 @@ func (l logWriter) Write(p []byte) (n int, err error) {
 }
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	// Initialise the logger as early as possible
 	logConfig := logp.DefaultConfig(logp.DefaultEnvironment)
 	logConfig.Beat = "agent-inputs"
@@ -52,13 +64,81 @@ func main() {
 		logger.Fatalf("could not read config file: %s", err)
 	}
 
+	// Configure the logp package
 	if err := logp.Configure(cfg.Log); err != nil {
 		logger.Fatalf("applying logger configuration: %v", err)
 	}
+	// Get a new logger with the configuration we've just applied
+	logger = logp.L()
+	// Set the output of the standard logger to our new logger.
+	log.SetOutput(logWriter{logger})
 
-	rootCmd.AddCommand(loadgenerator.Command(logger, cfg.LoadGenerator))
+	output, err := initPublishingPipeline(ctx, cfg, logger)
+	if err != nil {
+		logger.Fatalf("could not initialise publishing pipeline: %s", err)
+	}
 
-	if err := rootCmd.Execute(); err != nil {
+	rootCmd.AddCommand(loadgenerator.Command(logger, cfg.LoadGenerator, output))
+
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		logger.Fatal(err)
 	}
+}
+
+func initPublishingPipeline(ctx context.Context, cfg config.Config, logger *logp.Logger) (publisher.PipelineV2, error) {
+	// 1. Initialise ackerInstance
+	ackerInstance := acker.NoOp()
+
+	// 2. Initialise output
+	output := initOutput(ctx, cfg.Outputs, ackerInstance, logger)
+
+	// 3. Initialise publishing pipeline
+	pipeline := pipeline.New(
+		ctx,
+		logger.Named("pipeline"),
+		output,
+		nil, // processors list
+	)
+
+	return pipeline, nil
+}
+
+func initOutput(ctx context.Context, cfg config.Outputs, ackerInstance publisher.ACKer, logger *logp.Logger) publisher.PipelineV2 {
+	var client publisher.PipelineV2
+	var err error
+
+	switch {
+	case cfg.Console.Enabled:
+		client = console.New(
+			ctx,
+			os.Stdout,
+			logger.Named("console_client"),
+			ackerInstance,
+			cfg.Console,
+		)
+	case cfg.Shipper.Enabled:
+		client, err = shipper.New(
+			ctx,
+			cfg.Shipper,
+			logger.Named("shipper_client"),
+			ackerInstance,
+		)
+		if err != nil {
+			logger.Fatalf("could not initialise shipper: %s", err)
+		}
+
+	default:
+		logger.Warn("no output enabled, using a no-op output")
+		client = outputs.NewNoOp()
+	}
+
+	return client
+}
+
+func ackLogger(logger *logp.Logger) publisher.ACKer {
+	fn := func(acked, total int) {
+		logger.Debugf("acked: %d, total: %d", acked, total)
+	}
+
+	return acker.TrackingCounter(fn)
 }

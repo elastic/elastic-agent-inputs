@@ -10,14 +10,49 @@ import (
 	"github.com/elastic/elastic-agent-libs/mapstr"
 )
 
+// PublishMode enum sets some requirements on the client connection to the beats
+// publisher pipeline
+type PublishMode uint8
+
+const (
+	// DefaultGuarantees are up to the pipeline configuration itself.
+	DefaultGuarantees PublishMode = iota
+
+	// OutputChooses mode fully depends on the output and its configuration.
+	// Events might be dropped based on the users output configuration.
+	// In this mode no events are dropped within the pipeline. Events are only removed
+	// after the output has ACKed the events to the pipeline, even if the output
+	// did drop the events.
+	OutputChooses
+
+	// GuaranteedSend ensures events are retried until acknowledged by the output.
+	// Normally guaranteed sending should be used with some client ACK-handling
+	// to update state keeping track of the sending status.
+	GuaranteedSend
+
+	// DropIfFull drops an event to be send if the pipeline is currently full.
+	// This ensures a beats internals can continue processing if the pipeline has
+	// filled up. Useful if an event stream must be processed to keep internal
+	// state up-to-date.
+	DropIfFull
+)
+
 // Pipeline provides access to libbeat event publishing by creating a Client
 // instance.
 type Pipeline interface {
+	// ConnectWith create a new Client for publishing events to the pipeline.
+	// The client behavior on close and ACK handling can be configured by setting
+	// the appropriate fields in the passed ClientConfig.
+	// If not set otherwise the defaut publish mode is OutputChooses.
 	ConnectWith(ClientConfig) (Client, error)
+
+	// Connect creates a new client with default settings.
 	Connect() (Client, error)
 }
 
 type PipelineConnector = Pipeline
+
+type PipelineV2 Client
 
 // Client holds a connection to the beats publisher pipeline
 type Client interface {
@@ -33,6 +68,10 @@ type ClientConfig struct {
 
 	Processing ProcessingConfig
 
+	// CloseRef is a subset of context.Context that allows for cancelation.
+	// TODO (Tiago): Should we replace it with:
+	// Done signals the client to close the connection
+	// Done func() <-chan struct{} ?
 	CloseRef CloseRef
 
 	// WaitClose sets the maximum duration to wait on ACK, if client still has events
@@ -54,15 +93,15 @@ type ClientConfig struct {
 //
 // Due to event publishing and ACKing are asynchronous operations, the
 // operations on ACKer are normally executed in different go routines. ACKers
-// are required to be multi-threading safe.
+// are required to be goroutine safe.
 type ACKer interface {
 	// AddEvent informs the ACKer that a new event has been send to the client.
 	// AddEvent is called after the processors have handled the event. If the
-	// event has been dropped by the processor `published` will be set to true.
+	// event has been dropped by the processor `published` will be set to false.
 	// This allows the ACKer to do some bookeeping for dropped events.
 	AddEvent(event Event, published bool)
 
-	// ACK Events from the output and pipeline queue are forwarded to ACKEvents.
+	// ACKEvents from the output and pipeline queue are forwarded to ACKEvents.
 	// The number of reported events only matches the known number of events downstream.
 	// ACKers might need to keep track of dropped events by themselves.
 	ACKEvents(n int)
@@ -73,13 +112,6 @@ type ACKer interface {
 	// to suppress any ACK event propagation if required.
 	// Close might be called from another go-routine than AddEvent and ACKEvents.
 	Close()
-}
-
-// CloseRef allows users to close the client asynchronously.
-// A CloseReg implements a subset of function required for context.Context.
-type CloseRef interface {
-	Done() <-chan struct{}
-	Err() error
 }
 
 // ProcessingConfig provides additional event processing settings a client can
@@ -113,6 +145,13 @@ type ProcessingConfig struct {
 	Private interface{}
 }
 
+// CloseRef allows users to close the client asynchronously.
+// A CloseReg implements a subset of function required for context.Context.
+type CloseRef interface {
+	Done() <-chan struct{}
+	Err() error
+}
+
 // ClientEventer provides access to internal client events.
 type ClientEventer interface {
 	Closing() // Closing indicates the client is being shutdown next
@@ -133,32 +172,8 @@ type ProcessorList interface {
 // registered with the publisher pipeline.
 type Processor interface {
 	String() string // print full processor description
+
+	// Run runs the processor, on error event must be nil.
+	// If the event was dropped then event and err will be nil
 	Run(in *Event) (event *Event, err error)
 }
-
-// PublishMode enum sets some requirements on the client connection to the beats
-// publisher pipeline
-type PublishMode uint8
-
-const (
-	// DefaultGuarantees are up to the pipeline configuration itself.
-	DefaultGuarantees PublishMode = iota
-
-	// OutputChooses mode fully depends on the output and its configuration.
-	// Events might be dropped based on the users output configuration.
-	// In this mode no events are dropped within the pipeline. Events are only removed
-	// after the output has ACKed the events to the pipeline, even if the output
-	// did drop the events.
-	OutputChooses
-
-	// GuaranteedSend ensures events are retried until acknowledged by the output.
-	// Normally guaranteed sending should be used with some client ACK-handling
-	// to update state keeping track of the sending status.
-	GuaranteedSend
-
-	// DropIfFull drops an event to be send if the pipeline is currently full.
-	// This ensures a beats internals can continue processing if the pipeline has
-	// filled up. Useful if an event stream must be processed to keep internal
-	// state up-to-date.
-	DropIfFull
-)

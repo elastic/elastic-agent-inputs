@@ -12,11 +12,15 @@ import (
 	"time"
 
 	"github.com/elastic/elastic-agent-client/v7/pkg/client"
+	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	"github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/logp"
 
 	"go.uber.org/atomic"
 	"google.golang.org/protobuf/types/known/structpb"
+
+	"github.com/elastic/elastic-agent-shipper-client/pkg/helpers"
+	"github.com/elastic/elastic-agent-shipper-client/pkg/proto/messages"
 )
 
 type loadGenerator struct {
@@ -25,6 +29,7 @@ type loadGenerator struct {
 	runners map[string]*loadRunner
 	runMut  *sync.Mutex
 	events  atomic.Uint64
+	output  publisher.PipelineV2
 }
 
 func newLoadGenerator(logger *logp.Logger) *loadGenerator {
@@ -263,7 +268,27 @@ func (l loadGenerator) next(t time.Time) string {
 }
 
 // send sends the event to the publishing pipeline
-func (l loadGenerator) send(event string, handle *os.File) error {
-	_, err := handle.Write([]byte(event + "\n"))
-	return err
+// TODO (Tiago): implement it
+func (l loadGenerator) send(event string, f *os.File) error {
+	e := publisher.Event{
+		ShipperMessage: &messages.Event{
+			Fields: &messages.Struct{
+				Data: map[string]*messages.Value{
+					"message": helpers.NewStringValue(event),
+				},
+			},
+		},
+	}
+
+	if l.output == nil && f != nil {
+		_, err := f.WriteString(event)
+		if err != nil {
+			return fmt.Errorf("writting to file: %w", err)
+		}
+
+		return nil
+	}
+
+	l.output.Publish(e)
+	return nil
 }
