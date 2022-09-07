@@ -9,11 +9,16 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
+	"strconv"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/elastic/elastic-agent-client/v7/pkg/client"
 	"github.com/elastic/elastic-agent-inputs/inputs/loadgenerator"
 	"github.com/elastic/elastic-agent-inputs/pkg/config"
 	"github.com/elastic/elastic-agent-inputs/pkg/outputs"
@@ -78,7 +83,15 @@ func main() {
 		logger.Fatalf("could not initialise publishing pipeline: %s", err)
 	}
 
-	rootCmd.AddCommand(loadgenerator.Command(logger, cfg.LoadGenerator, output))
+	agentAddr := net.JoinHostPort(cfg.ElasticAgent.Host, strconv.Itoa(cfg.ElasticAgent.Port))
+	logger.Infof("connecting to Elastic-Agent on: '%s'", agentAddr)
+
+	client := client.NewV2(agentAddr, cfg.ElasticAgent.Token, client.VersionInfo{
+		Name:    "elastic-agent-inputs",
+		Version: "v1.0.0",
+	}, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	rootCmd.AddCommand(loadgenerator.Command(logger, cfg.LoadGenerator, client, output))
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		logger.Fatal(err)

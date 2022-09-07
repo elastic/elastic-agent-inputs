@@ -37,7 +37,15 @@ func init() {
 type Config struct {
 	Log           logp.Config          `yaml:"logging" json:"logging"`
 	LoadGenerator loadgenerator.Config `yaml:"loadgenerator" json:"loadgenerator"`
+	ElasticAgent  ElasticAgent         `yaml:"elasticagent" json:"elasticagent"`
 	Outputs       Outputs              `yaml:"outputs"`
+}
+
+// ElasticAgent defines the connection parameters to connect to Elastic-Agent
+type ElasticAgent struct {
+	Host  string `yaml:"host" json:"host"`
+	Port  int    `yaml:"port" json:"port"`
+	Token string `yaml:"token" json:"token"`
 }
 
 type Outputs struct {
@@ -94,6 +102,10 @@ func defaultConfig() Config {
 		LoadGenerator: loadgenerator.DefaultConfig(),
 		Outputs: Outputs{
 			Shipper: shipper.DefaultConfig(),
+		},
+		ElasticAgent: ElasticAgent{
+			Host: "localhost",
+			Port: 3000,
 		},
 	}
 }

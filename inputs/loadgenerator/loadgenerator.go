@@ -5,38 +5,30 @@
 package loadgenerator
 
 import (
-	"time"
-
 	"github.com/spf13/cobra"
 
+	"github.com/elastic/elastic-agent-client/v7/pkg/client"
+	"github.com/elastic/elastic-agent-inputs/pkg/manager/input"
 	"github.com/elastic/elastic-agent-inputs/pkg/publisher"
 	"github.com/elastic/elastic-agent-libs/logp"
 )
 
-func Command(logger *logp.Logger, cfg Config, output publisher.PipelineV2) *cobra.Command {
+func Command(logger *logp.Logger, cfg Config, agentClient client.V2, output publisher.PipelineV2) *cobra.Command {
 	loadGeneratorCmd := cobra.Command{
 		Use:   "loadgenerator",
 		Short: "Load generator",
-		Run:   run(logger, cfg, output),
+		Run:   run(logger, cfg, agentClient, output),
 	}
 
 	return &loadGeneratorCmd
 }
 
-func run(logger *logp.Logger, cfg Config, output publisher.PipelineV2) func(cmd *cobra.Command, args []string) {
+func run(logger *logp.Logger, cfg Config, agentClient client.V2, output publisher.PipelineV2) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		logger = logger.Named("loadgenerator")
 		ctx := cmd.Context()
 
-		// initialises the loadGenerator
-		lg := loadGenerator{
-			now:    time.Now,
-			logger: logger,
-			output: output,
-		}
-
-		if err := lg.Start(ctx); err != nil {
-			logger.Fatal(err)
-		}
+		spkm := input.NewSpikeManager(logger.Named("spike-manager"), agentClient, output, NewLoadGenerator)
+		spkm.Init(ctx)
 	}
 }

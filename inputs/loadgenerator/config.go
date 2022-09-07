@@ -5,7 +5,11 @@
 package loadgenerator
 
 import (
+	"fmt"
 	"time"
+
+	"github.com/elastic/elastic-agent-libs/config"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Config struct {
@@ -30,6 +34,9 @@ type Config struct {
 	// Eventually we want to send this to the shipper, but for now a file works
 	// If this is unset, default to stdout
 	OutFile string `yaml:"outfile" json:"outfile"`
+
+	Port  int    `yaml:"port" json:"port"`
+	Token string `yaml:"token" json:"token"`
 }
 
 func DefaultConfig() Config {
@@ -39,4 +46,18 @@ func DefaultConfig() Config {
 		TimeDelta:   time.Second,
 		CurrentTime: false,
 	}
+}
+
+// configFromSource creates the config struct from the protobuf source map
+func configFromSource(source *structpb.Struct) (Config, error) {
+	result := DefaultConfig()
+	cfg, err := config.NewConfigFrom(source.AsMap())
+	if err != nil {
+		return result, fmt.Errorf("error creating new config: %w", err)
+	}
+	err = cfg.Unpack(&result)
+	if err != nil {
+		return result, fmt.Errorf("error unpacking config: %w", err)
+	}
+	return result, nil
 }
