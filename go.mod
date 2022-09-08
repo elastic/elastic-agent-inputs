@@ -19,7 +19,6 @@ require (
 	github.com/urso/sderr v0.0.0-20210525210834-52b04e8f5c71
 	go.elastic.co/go-licence-detector v0.5.0
 	go.uber.org/atomic v1.9.0
-	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4
 	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150
 	golang.org/x/tools v0.1.9
 	google.golang.org/grpc v1.46.0
