@@ -26,7 +26,7 @@ import (
 	"github.com/elastic/elastic-agent-libs/logp"
 )
 
-func TestAgentCfgSetup(t *testing.T) {
+func TestSetConfigValues(t *testing.T) {
 	loop := false
 	count := uint64(1000)
 	setup := map[string]interface{}{
@@ -39,7 +39,7 @@ func TestAgentCfgSetup(t *testing.T) {
 	testStruct, err := structpb.NewStruct(setup)
 	require.NoError(t, err)
 
-	cfg, err := setConfigValues(testStruct)
+	cfg, err := configFromProtobuf(testStruct)
 	require.NoError(t, err)
 	t.Logf("Got config: %#v", cfg)
 	assert.Equal(t, cfg.Loop, loop)
@@ -64,8 +64,7 @@ func TestWithMockServer(t *testing.T) {
 	}
 
 	// iterate N times, making N streams of the loadgenerator to test
-	tempPath := os.TempDir()
-	strpath, err := os.MkdirTemp(tempPath, "test-loadgen")
+	strpath, err := os.MkdirTemp("", "test-loadgen")
 	defer os.RemoveAll(strpath)
 
 	t.Logf("Writing logs to %s", strpath)
@@ -74,7 +73,7 @@ func TestWithMockServer(t *testing.T) {
 	for i := 0; i < streamCount; i++ {
 		stream := &proto.Stream{
 			Id: fmt.Sprintf("test-stream-%d", i),
-			Source: RequireNewStruct(
+			Source: RequireNewStruct(t,
 				map[string]interface{}{
 					"delay":       "0s",
 					"timedelta":   "1s",
@@ -144,8 +143,8 @@ func TestWithMockServer(t *testing.T) {
 	} // end of srv declaration
 
 	err = srv.Start()
-	defer srv.Stop()
 	require.NoError(t, err)
+	defer srv.Stop()
 
 	client := client.NewV2(fmt.Sprintf(":%d", srv.Port), token, client.VersionInfo{
 		Name:    "program",
@@ -197,10 +196,8 @@ func checkUnitStateHealthy(units []*proto.UnitObserved) bool {
 }
 
 //RequireNewStruct converts a mapstr to a protobuf struct
-func RequireNewStruct(v map[string]interface{}) *structpb.Struct {
+func RequireNewStruct(t *testing.T, v map[string]interface{}) *structpb.Struct {
 	str, err := structpb.NewStruct(v)
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
 	return str
 }

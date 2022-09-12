@@ -28,7 +28,6 @@ type loadGenerator struct {
 }
 
 func newLoadGenerator(logger *logp.Logger) *loadGenerator {
-
 	return &loadGenerator{
 		now:     time.Now,
 		logger:  logger,
@@ -37,7 +36,7 @@ func newLoadGenerator(logger *logp.Logger) *loadGenerator {
 	}
 }
 
-// load runner handles the communications between a loadGenerator instance and the server
+// loadRunner handles the communications between a loadGenerator instance and the server
 type loadRunner struct {
 	stopFuncs map[string]chan struct{}
 	mapMut    *sync.Mutex
@@ -58,7 +57,7 @@ func (l *loadGenerator) Close(ctx context.Context) error {
 
 // Start the generator and initialize the client
 func (l *loadGenerator) Start(ctx context.Context) error {
-	agentClient, _, err := client.NewV2FromReader(os.Stdin, client.VersionInfo{
+	agentClient, services, err := client.NewV2FromReader(os.Stdin, client.VersionInfo{
 		Name:    "beat-v2-client",
 		Version: "alpha",
 		Meta:    map[string]string{},
@@ -66,6 +65,7 @@ func (l *loadGenerator) Start(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error fetching client from stdin: %w", err)
 	}
+	l.logger.Debugf("Got client with configured services: %#v", services)
 	return l.StartWithClient(ctx, agentClient)
 }
 
@@ -125,12 +125,13 @@ func (l *loadGenerator) removeUnit(unit *client.Unit) {
 // handleUnitModified wraps any functions needed to manage changes to a unit
 func (l *loadGenerator) handleUnitModified(unit *client.Unit) {
 	state, _, _ := unit.Expected()
-	if state == client.UnitStateStopping || state == client.UnitStateStopped {
+	if state == client.UnitStateStopped {
 		l.tearDownUnit(unit)
 	} else {
-		// Not sure how this should respond to unit changes.
-		// Reload the entire unit? Diff all the streams for changes, and reload individual streams?
-		l.logger.Debugf("Got unit state: %s", state)
+		l.logger.Debugf("Got updated unit state: %s", state)
+		// if for some reason we get a new unit, just shut down and restart
+		l.tearDownUnit(unit)
+		l.handleNewUnit(unit)
 	}
 }
 
@@ -168,7 +169,7 @@ func (l *loadGenerator) handleNewUnit(unit *client.Unit) error {
 	_ = unit.UpdateState(client.UnitStateConfiguring, "configuring unit", nil)
 	for _, runner := range cfg.Streams {
 		streamID := runner.Id
-		cfg, err := setConfigValues(runner.Source)
+		cfg, err := configFromProtobuf(runner.Source)
 		if err != nil {
 			return fmt.Errorf("error configuring runner: %w", err)
 		}
@@ -190,8 +191,8 @@ func (l *loadGenerator) handleNewUnit(unit *client.Unit) error {
 	return nil
 }
 
-// setConfigValues creates the config struct from the protobuf source map
-func setConfigValues(source *structpb.Struct) (Config, error) {
+// configFromProtobuf creates the config struct from the protobuf source map
+func configFromProtobuf(source *structpb.Struct) (Config, error) {
 	result := DefaultConfig()
 	cfg, err := config.NewConfigFrom(source.AsMap())
 	if err != nil {
@@ -227,8 +228,8 @@ func (l *loadGenerator) Run(stopChan chan struct{}, cfg Config, unit *client.Uni
 			return fmt.Errorf("error creating file at %s: %w", cfg.OutFile, err)
 		}
 		outFile = f
+		defer outFile.Close()
 	}
-	defer outFile.Close()
 
 	l.logger.Debugf("Starting load gen loop for stream %s: Output: %s; loop forever: %v; iterations: %d", streamID, cfg.OutFile, cfg.Loop, cfg.EventsCount)
 	for {

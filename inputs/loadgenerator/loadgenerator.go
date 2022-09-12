@@ -6,7 +6,6 @@ package loadgenerator
 
 import (
 	"context"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -26,14 +25,7 @@ func Command(logger *logp.Logger, cfg Config) *cobra.Command {
 func run(cfg Config) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		logger := logp.NewLogger("load-generator")
-
-		logger.Debugf("Config: %#v", cfg)
-		logger.Info("Starting loadgenerator")
-
-		lg := loadGenerator{
-			now:    time.Now,
-			logger: logger,
-		}
+		lg := newLoadGenerator(logger)
 
 		if err := lg.Start(context.TODO()); err != nil {
 			logger.Fatal(err)
