@@ -59,10 +59,21 @@ func main() {
 	log.SetOutput(logWriter{logger})
 
 	rootCmd := &cobra.Command{
-		Use: "agent-inputs",
+		Use:  "agent-inputs",
+		RunE: run,
 	}
 	rootCmd.PersistentFlags().AddGoFlag(flag.CommandLine.Lookup("path.config"))
 	rootCmd.PersistentFlags().AddGoFlag(flag.CommandLine.Lookup("c"))
+
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
+		logger.Fatal(err)
+	}
+}
+
+func run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+
+	logger := logp.L()
 
 	cfg, err := config.ReadConfig()
 	if err != nil {
@@ -91,11 +102,10 @@ func main() {
 		Version: "v1.0.0",
 	}, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
-	rootCmd.AddCommand(loadgenerator.Command(logger, cfg.LoadGenerator, client, output))
+	cmd.AddCommand(loadgenerator.Command(logger, cfg.LoadGenerator, client, output))
 
-	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		logger.Fatal(err)
-	}
+	return nil
+
 }
 
 func initPublishingPipeline(ctx context.Context, cfg config.Config, logger *logp.Logger) (publisher.PipelineV2, error) {
