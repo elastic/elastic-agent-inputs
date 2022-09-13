@@ -86,10 +86,7 @@ func (l *loadGenerator) StartWithClient(ctx context.Context, agentClient client.
 			switch change.Type {
 			case client.UnitChangedAdded:
 				l.logger.Debugf("Got new Unit")
-				err := l.handleNewUnit(change.Unit)
-				if err != nil {
-					_ = change.Unit.UpdateState(client.UnitStateFailed, fmt.Sprintf("New unit failed with: %s", err), nil)
-				}
+				l.handleNewUnit(change.Unit)
 			case client.UnitChangedModified:
 				l.logger.Debugf("Got unit modified")
 				l.handleUnitModified(change.Unit)
@@ -132,6 +129,7 @@ func (l *loadGenerator) handleUnitModified(unit *client.Unit) {
 		// if for some reason we get a new unit, just shut down and restart
 		l.tearDownUnit(unit)
 		l.handleNewUnit(unit)
+
 	}
 }
 
@@ -159,7 +157,7 @@ func (l *loadGenerator) tearDownUnit(unit *client.Unit) {
 }
 
 // handleNewUnit starts a new unit and initializes a collection of runners from the config
-func (l *loadGenerator) handleNewUnit(unit *client.Unit) error {
+func (l *loadGenerator) handleNewUnit(unit *client.Unit) {
 	l.runMut.Lock()
 	defer l.runMut.Unlock()
 	// As far as configuration: each stream will be treated as a different load-generator run,
@@ -171,8 +169,9 @@ func (l *loadGenerator) handleNewUnit(unit *client.Unit) error {
 		streamID := runner.Id
 		cfg, err := configFromProtobuf(runner.Source)
 		if err != nil {
-			return fmt.Errorf("error configuring runner: %w", err)
+			_ = unit.UpdateState(client.UnitStateDegraded, fmt.Sprintf("Error creating config from protobuf data for unit %s: %s", streamID, err), nil)
 		}
+
 		stop := make(chan struct{}, 1)
 		_ = unit.UpdateState(client.UnitStateStarting, fmt.Sprintf("Starting stream with ID %s", streamID), nil)
 		go func() {
@@ -188,7 +187,6 @@ func (l *loadGenerator) handleNewUnit(unit *client.Unit) error {
 	mgr.unit = unit
 	l.runners[unit.ID()] = mgr
 	_ = unit.UpdateState(client.UnitStateHealthy, "started runners", nil)
-	return nil
 }
 
 // configFromProtobuf creates the config struct from the protobuf source map
