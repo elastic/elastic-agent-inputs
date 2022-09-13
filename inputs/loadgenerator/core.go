@@ -122,7 +122,7 @@ func (l *loadGenerator) removeUnit(unit *client.Unit) {
 // handleUnitModified wraps any functions needed to manage changes to a unit
 func (l *loadGenerator) handleUnitModified(unit *client.Unit) {
 	state, _, _ := unit.Expected()
-	if state == client.UnitStateStopped {
+	if state == client.UnitStateStopping {
 		l.tearDownUnit(unit)
 	} else {
 		l.logger.Debugf("Got updated unit state: %s", state)
