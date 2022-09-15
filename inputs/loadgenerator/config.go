@@ -25,6 +25,11 @@ type Config struct {
 
 	// Loop forever until the process is shutdown
 	Loop bool `yaml:"loop" json:"loop"`
+
+	// Send the generated output to a file
+	// Eventually we want to send this to the shipper, but for now a file works
+	// If this is unset, default to stdout
+	OutFile string `yaml:"outfile" json:"outfile"`
 }
 
 func DefaultConfig() Config {
