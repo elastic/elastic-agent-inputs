@@ -8,6 +8,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -64,6 +65,7 @@ func main() {
 	}
 	rootCmd.PersistentFlags().AddGoFlag(flag.CommandLine.Lookup("path.config"))
 	rootCmd.PersistentFlags().AddGoFlag(flag.CommandLine.Lookup("c"))
+	rootCmd.PersistentFlags().AddGoFlag(flag.CommandLine.Lookup("ea_stdin"))
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		logger.Fatal(err)
@@ -77,32 +79,29 @@ func run(cmd *cobra.Command, args []string) error {
 
 	cfg, err := config.ReadConfig()
 	if err != nil {
-		logger.Fatalf("could not read config file: %s", err)
+		return fmt.Errorf("could not read config file: %w", err)
 	}
 
 	// Configure the logp package
 	if err := logp.Configure(cfg.Log); err != nil {
-		logger.Fatalf("applying logger configuration: %v", err)
+		return fmt.Errorf("applying logger configuration: %w", err)
 	}
 	// Get a new logger with the configuration we've just applied
 	logger = logp.L()
 	// Set the output of the standard logger to our new logger.
 	log.SetOutput(logWriter{logger})
 
-	output, err := initPublishingPipeline(ctx, cfg, logger)
+	agentClient, err := initElasticAgentClient(logger, cfg.ElasticAgent, os.Stdin)
 	if err != nil {
-		logger.Fatalf("could not initialise publishing pipeline: %s", err)
+		return fmt.Errorf("could not initialise Elastic-Agent client: %w", err)
 	}
 
-	agentAddr := net.JoinHostPort(cfg.ElasticAgent.Host, strconv.Itoa(cfg.ElasticAgent.Port))
-	logger.Infof("connecting to Elastic-Agent on: '%s'", agentAddr)
+	output, err := initPublishingPipeline(ctx, cfg, logger)
+	if err != nil {
+		return fmt.Errorf("could not initialise publishing pipeline: %w", err)
+	}
 
-	client := client.NewV2(agentAddr, cfg.ElasticAgent.Token, client.VersionInfo{
-		Name:    "elastic-agent-inputs",
-		Version: "v1.0.0",
-	}, grpc.WithTransportCredentials(insecure.NewCredentials()))
-
-	cmd.AddCommand(loadgenerator.Command(logger, cfg.LoadGenerator, client, output))
+	cmd.AddCommand(loadgenerator.Command(logger, cfg.LoadGenerator, agentClient, output))
 
 	return nil
 
@@ -164,4 +163,34 @@ func ackLogger(logger *logp.Logger) publisher.ACKer {
 	}
 
 	return acker.TrackingCounter(fn)
+}
+
+func initElasticAgentClient(logger *logp.Logger, cfg config.ElasticAgent, stdin io.Reader) (client.V2, error) {
+	if cfg.ConfigFromStdin {
+		// Technically this reads the config from the reader, but to make the
+		// log message as informative as possible and keep it as close as possible
+		// from where things happen, we assume the reader is stdin
+		logger.Info("Reading Elastic-Agent connection information from stdin")
+		agentClient, _, err := client.NewV2FromReader(stdin, client.VersionInfo{
+			Name:    "beat-v2-client",
+			Version: "alpha",
+			Meta:    map[string]string{},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error fetching client from reader: %w", err)
+		}
+
+		return agentClient, nil
+	}
+
+	logger.Info("Reading Elastic-Agent connection information from config file")
+	agentAddr := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
+	logger.Infof("connecting to Elastic-Agent on: '%s'", agentAddr)
+
+	client := client.NewV2(agentAddr, cfg.Token, client.VersionInfo{
+		Name:    "elastic-agent-inputs",
+		Version: "v1.0.0",
+	}, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	return client, nil
 }

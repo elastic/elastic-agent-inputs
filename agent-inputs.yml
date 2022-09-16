@@ -26,6 +26,7 @@ outputs:
     enabled: false
 
 elasticagent:
+  configfromstdin: false
   port: 3000
   token: "3dde0396-7b28-4946-b2af-af4cc143232d"
 

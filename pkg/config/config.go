@@ -24,6 +24,7 @@ const (
 var (
 	ConfigPath     string
 	ConfigFilePath string
+	EAFromStdin    bool
 )
 
 // Define some flags used by Elastic-Agent and its friends
@@ -31,6 +32,8 @@ func init() {
 	fs := flag.CommandLine
 	fs.StringVar(&ConfigFilePath, "c", defaultConfigName, "Configuration file, relative to path.config")
 	fs.StringVar(&ConfigPath, "path.config", ConfigPath, "Config path is the directory agent-inputs looks for its config file")
+
+	fs.BoolVar(&EAFromStdin, "ea_stdin", EAFromStdin, "Read Elastic-Agent connection configuration from stdin")
 }
 
 // Config defines the options present in the config file
@@ -43,9 +46,10 @@ type Config struct {
 
 // ElasticAgent defines the connection parameters to connect to Elastic-Agent
 type ElasticAgent struct {
-	Host  string `yaml:"host" json:"host"`
-	Port  int    `yaml:"port" json:"port"`
-	Token string `yaml:"token" json:"token"`
+	Host            string `yaml:"host" json:"host"`
+	Port            int    `yaml:"port" json:"port"`
+	Token           string `yaml:"token" json:"token"`
+	ConfigFromStdin bool   `yaml:"configfromstdin" json:"configfromstdin"`
 }
 
 type Outputs struct {
@@ -104,8 +108,9 @@ func defaultConfig() Config {
 			Shipper: shipper.DefaultConfig(),
 		},
 		ElasticAgent: ElasticAgent{
-			Host: "localhost",
-			Port: 3000,
+			ConfigFromStdin: false,
+			Host:            "localhost",
+			Port:            3000,
 		},
 	}
 }
