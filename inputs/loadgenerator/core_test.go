@@ -115,7 +115,7 @@ func TestWithMockServer(t *testing.T) {
 					if time.Since(start) > runtime {
 						t.Logf("Sending stopped config...")
 						//remove the units once they've been healthy for a given period of time
-						return createUnitsWithState(proto.State_STOPPING, expectedLoadGen, unitOneID, 1)
+						return createUnitsWithState(proto.State_STOPPED, expectedLoadGen, unitOneID, 1)
 					}
 					//otherwise, just remove the units
 				} else if observed.Units[0].State == proto.State_STOPPED {
