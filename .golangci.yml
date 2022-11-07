@@ -126,7 +126,7 @@ linters-settings:
 
   gosimple:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.18.7"
+    go: "1.18.8"
 
   misspell:
     # Correct spellings using locale preferences for US or UK.
@@ -161,13 +161,13 @@ linters-settings:
 
   staticcheck:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.18.7"
+    go: "1.18.8"
     # https://staticcheck.io/docs/options#checks
     checks: ["all"]
 
   stylecheck:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.18.7"
+    go: "1.18.8"
     checks: ["all"]
 
   unparam:
@@ -179,4 +179,4 @@ linters-settings:
 
   unused:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.18.7"
+    go: "1.18.8"
