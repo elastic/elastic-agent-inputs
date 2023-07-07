@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/buildkite/pipeline-schema/main/schema.json
 
+# GO_VERSION set up on pre-command hook
 steps:
   - label: "Example test"
-    command: echo "Hello!"
+    command: echo "Hello! ${GO_VERSION}"
