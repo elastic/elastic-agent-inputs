@@ -4,7 +4,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: elastic-agent-system-metrics
+  name: elastic-agent-inputs
 
 spec:
   type: library
