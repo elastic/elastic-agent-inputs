@@ -5,7 +5,7 @@ steps:
     command:
       - ".buildkite/scripts/lint.sh"
     agents:
-      image: golang:{{matrix.go_version}}
+      image: golang:${GO_VERSION}
       cpu: "8"
       memory: "4G"
 
@@ -14,7 +14,7 @@ steps:
     command:
       - ".buildkite/scripts/test.sh"
     agents:
-      image: golang:{{matrix.go_version}}
+      image: golang:${GO_VERSION}
       cpu: "8"
       memory: "4G"
     artifact_paths:
