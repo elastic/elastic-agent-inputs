@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/buildkite/pipeline-schema/main/schema.json
-
+env:
+  GO_VERSION: '1.20.5'
 steps:
   - label: ":build: Lint"
     command:
