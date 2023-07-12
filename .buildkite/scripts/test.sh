@@ -8,7 +8,7 @@ with_go_junit_report
 
 set +e
 go test -v ./... > tests-report.txt
-awk '{gsub("=== RUN", "--- RUN"); print }' tests-report.txt
+awk '{gsub("---", "----"); print }' tests-report.txt
 exit_code=$?
 set -e
 
