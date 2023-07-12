@@ -7,7 +7,8 @@ add_bin_path
 with_go_junit_report
 
 set +e
-go test -v ./...| tee tests-report.txt
+go test -v ./... > tests-report.txt
+awk '{gsub("=== RUN", "--- RUN"); print }' tests-report.txt
 exit_code=$?
 set -e
 
