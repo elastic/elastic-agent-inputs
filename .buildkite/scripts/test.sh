@@ -8,9 +8,12 @@ with_go_junit_report
 
 set +e
 go test -v ./... > tests-report.txt
-awk '{gsub("---", "----"); print }' tests-report.txt
 exit_code=$?
 set -e
+
+# Buildkite collapse logs under --- symbols
+# need to change --- to anything else or switch off collapsing (note: not available at the moment of this commit)
+awk '{gsub("---", "----"); print }' tests-report.txt
 
 # Create Junit report for junit annotation plugin
 go-junit-report > junit-report.xml < tests-report.txt
