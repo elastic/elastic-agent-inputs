@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/buildkite/pipeline-schema/main/schema.json
 steps:
-  - label: ":build: Lint"
+  - label: ":pick: Lint"
     command:
       - ".buildkite/scripts/lint.sh"
     agents:
