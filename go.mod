@@ -1,6 +1,6 @@
 module github.com/elastic/elastic-agent-inputs
 
-go 1.19
+go 1.20
 
 require (
 	github.com/brianvoe/gofakeit/v6 v6.18.0
