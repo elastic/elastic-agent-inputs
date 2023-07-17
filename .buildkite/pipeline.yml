@@ -1,5 +1,31 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/buildkite/pipeline-schema/main/schema.json
-
 steps:
-  - label: "Example test"
-    command: echo "Hello!"
+  - label: ":pick: Lint"
+    command:
+      - ".buildkite/scripts/lint.sh"
+    agents:
+      image: golang:${GO_VERSION}
+      cpu: "8"
+      memory: "4G"
+
+  - label: ":linux: Test on Go ${GO_VERSION}"
+    key: test
+    command:
+      - ".buildkite/scripts/test.sh"
+    agents:
+      image: golang:${GO_VERSION}
+      cpu: "8"
+      memory: "4G"
+    artifact_paths:
+      - "junit-*.xml"
+
+  - label: ":junit: Junit annotate"
+    plugins:
+      - junit-annotate#v2.4.1:
+          artifacts: "junit-*.xml"
+          fail-build-on-error: true
+    agents:
+      provider: "gcp" #junit plugin requires docker
+    depends_on:
+      - step: "test"
+        allow_failure: true
