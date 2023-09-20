@@ -1,5 +1,7 @@
 # elastic-agent-inputs
 
+The code in this repository was an experiment that was never released, with no planned future development.
+
 ## Project structure
 
 ### `inputs`
